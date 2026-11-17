@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -37,6 +38,9 @@ type App struct {
 	// Pipe runs docker with stdin and stdout redirected and returns its
 	// exit code. Used by the database import and export.
 	Pipe func(args []string, stdin io.Reader, stdout io.Writer) int
+	// ConfigDir holds the files bothy writes for itself (the proxy's
+	// compose file).
+	ConfigDir string
 
 	dryRun bool
 }
@@ -87,6 +91,11 @@ func Main(args []string) int {
 		fmt.Fprintf(os.Stderr, "bothy: %v\n", err)
 		return 1
 	}
+	config, err := os.UserConfigDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "bothy: %v\n", err)
+		return 1
+	}
 	a := &App{
 		Dir:         dir,
 		Interactive: isTerminal(os.Stdin) && isTerminal(os.Stdout),
@@ -96,6 +105,7 @@ func Main(args []string) int {
 		Run:         runDocker,
 		Output:      outputDocker,
 		Pipe:        pipeDocker,
+		ConfigDir:   filepath.Join(config, "bothy"),
 	}
 	return a.Main(args)
 }

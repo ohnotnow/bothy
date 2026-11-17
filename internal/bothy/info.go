@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/tabwriter"
 )
@@ -20,29 +21,57 @@ type published struct {
 	Target  int
 }
 
+// traefikHost finds the hostnames in traefik router rules: Host(`x`).
+var traefikHost = regexp.MustCompile("Host\\(`([^`]+)`\\)")
+
 // parsePublished reads `docker compose ps --format json`, which prints one
-// JSON object per line, and returns each port published on the host.
-func parsePublished(out []byte) ([]published, error) {
+// JSON object per line, and returns each port published on the host and
+// every hostname the proxy routes to the app.
+func parsePublished(out []byte) ([]published, []string, error) {
 	type row struct {
 		Service    string
+		Labels     string
 		Publishers []struct {
 			URL           string
 			TargetPort    int
 			PublishedPort int
 		}
 	}
-	var found []published
-	seen := map[string]bool{}
-	sc := bufio.NewScanner(bytes.NewReader(out))
-	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024) // label lists make long lines
-	for sc.Scan() {
-		line := bytes.TrimSpace(sc.Bytes())
-		if len(line) == 0 {
-			continue
+	// Current compose prints one object per line; older versions printed one
+	// JSON array.
+	var rows []row
+	if trimmed := bytes.TrimSpace(out); len(trimmed) > 0 && trimmed[0] == '[' {
+		if err := json.Unmarshal(trimmed, &rows); err != nil {
+			return nil, nil, fmt.Errorf("reading docker compose ps output: %w", err)
 		}
-		var r row
-		if err := json.Unmarshal(line, &r); err != nil {
-			return nil, fmt.Errorf("reading docker compose ps output: %w", err)
+	} else {
+		sc := bufio.NewScanner(bytes.NewReader(out))
+		sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024) // label lists make long lines
+		for sc.Scan() {
+			line := bytes.TrimSpace(sc.Bytes())
+			if len(line) == 0 {
+				continue
+			}
+			var r row
+			if err := json.Unmarshal(line, &r); err != nil {
+				return nil, nil, fmt.Errorf("reading docker compose ps output: %w", err)
+			}
+			rows = append(rows, r)
+		}
+		if err := sc.Err(); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var found []published
+	var hosts []string
+	seen := map[string]bool{}
+	for _, r := range rows {
+		for _, m := range traefikHost.FindAllStringSubmatch(r.Labels, -1) {
+			if !seen["host/"+m[1]] {
+				seen["host/"+m[1]] = true
+				hosts = append(hosts, m[1])
+			}
 		}
 		for _, p := range r.Publishers {
 			if p.PublishedPort == 0 {
@@ -56,7 +85,7 @@ func parsePublished(out []byte) ([]published, error) {
 			found = append(found, published{r.Service, p.URL, p.PublishedPort, p.TargetPort})
 		}
 	}
-	return found, sc.Err()
+	return found, hosts, nil
 }
 
 // address renders a published port the way a person would use it.
@@ -100,16 +129,19 @@ func (a *App) info() int {
 		fmt.Fprintf(a.Stderr, "bothy: asking docker for the app's ports: %v\n", err)
 		return 1
 	}
-	ps, err := parsePublished(out)
+	ps, hosts, err := parsePublished(out)
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "bothy: %v\n", err)
 		return 1
 	}
-	if len(ps) == 0 {
+	if len(ps)+len(hosts) == 0 {
 		fmt.Fprintf(a.Stdout, "%s has nothing running with a port (bothy start starts it).\n", filepath.Base(a.Dir))
 		return 0
 	}
 	w := tabwriter.NewWriter(a.Stdout, 0, 0, 2, ' ', 0)
+	for _, h := range hosts {
+		fmt.Fprintf(w, "app\thttp://%s\n", h)
+	}
 	for _, p := range ps {
 		extra := ""
 		if p.Service == dbService {

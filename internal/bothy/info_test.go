@@ -9,16 +9,19 @@ import (
 
 // Shaped like real `docker compose ps --format json` output (one object per
 // line), trimmed to the fields bothy reads.
-const psOutput = `{"Service":"appserver","State":"running","Publishers":[{"URL":"127.0.0.1","TargetPort":6060,"PublishedPort":54123,"Protocol":"tcp"}]}
+const psOutput = `{"Service":"appserver","State":"running","Labels":"com.docker.compose.project=alpha-dev,traefik.enable=true,traefik.http.routers.alpha.rule=Host(` + "`alpha.bothy.localhost`" + `),traefik.http.services.alpha.loadbalancer.server.port=6060","Publishers":[{"URL":"127.0.0.1","TargetPort":6060,"PublishedPort":54123,"Protocol":"tcp"}]}
 {"Service":"cache","State":"running","Publishers":[{"URL":"","TargetPort":6379,"PublishedPort":0,"Protocol":"tcp"}]}
 {"Service":"database","State":"running","Publishers":[{"URL":"127.0.0.1","TargetPort":3306,"PublishedPort":4406,"Protocol":"tcp"}]}
 {"Service":"sendmailhog","State":"running","Publishers":[{"URL":"0.0.0.0","TargetPort":8025,"PublishedPort":54124,"Protocol":"tcp"},{"URL":"::","TargetPort":8025,"PublishedPort":54124,"Protocol":"tcp"},{"URL":"","TargetPort":1025,"PublishedPort":0,"Protocol":"tcp"}]}
 `
 
 func TestParsePublished(t *testing.T) {
-	got, err := parsePublished([]byte(psOutput))
+	got, hosts, err := parsePublished([]byte(psOutput))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(hosts, []string{"alpha.bothy.localhost"}) {
+		t.Fatalf("hosts %q", hosts)
 	}
 	want := []published{
 		{"appserver", "127.0.0.1", 54123, 6060},
@@ -35,7 +38,11 @@ func infoApp(t *testing.T, db string) (*App, *[][]string, *bytes.Buffer) {
 	t.Helper()
 	a, calls, stdout, _ := fakeApp(t, true)
 	a.Output = func(args []string) ([]byte, error) {
-		if strings.Contains(strings.Join(args, " "), " ps ") {
+		joined := strings.Join(args, " ")
+		switch {
+		case strings.HasPrefix(joined, "compose ls"):
+			return []byte(proxyUp), nil
+		case strings.Contains(joined, " ps "):
 			return []byte(psOutput), nil
 		}
 		return []byte(db), nil
@@ -50,6 +57,7 @@ func TestInfo(t *testing.T) {
 	}
 	got := out.String()
 	for _, s := range []string{
+		"http://alpha.bothy.localhost",
 		"http://127.0.0.1:54123",
 		"127.0.0.1:4406  (database laravel, user laravel, password secret with spaces)",
 		"http://127.0.0.1:54124",

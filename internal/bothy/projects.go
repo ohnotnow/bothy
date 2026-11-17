@@ -80,7 +80,6 @@ func cmdPoweroff(a *App, args []string) int {
 	}
 	if len(ps) == 0 {
 		fmt.Fprintln(a.Stdout, "No bothy projects running.")
-		return 0
 	}
 	failed := 0
 	for _, p := range ps {
@@ -89,6 +88,9 @@ func cmdPoweroff(a *App, args []string) int {
 			fmt.Fprintf(a.Stderr, "bothy: could not stop %s\n", p.Name)
 			failed++
 		}
+	}
+	if a.stopProxy() != 0 {
+		failed++
 	}
 	if failed > 0 {
 		return 1

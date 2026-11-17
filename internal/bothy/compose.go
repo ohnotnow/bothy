@@ -41,6 +41,9 @@ func cmdStart(a *App, args []string) int {
 	if len(args) > 0 {
 		return a.usageError("start takes no arguments")
 	}
+	if code := a.ensureProxy(); code != 0 {
+		return code
+	}
 	if code := a.Run(compose("up", "-d", "--build")); code != 0 || a.dryRun {
 		return code
 	}
@@ -69,7 +72,13 @@ func cmdRebuild(a *App, args []string) int {
 	if len(args) > 0 {
 		return a.usageError("rebuild takes no arguments")
 	}
-	if code := a.runAll(compose("down"), compose("build", "--pull"), compose("up", "-d")); code != 0 || a.dryRun {
+	if code := a.runAll(compose("down"), compose("build", "--pull")); code != 0 {
+		return code
+	}
+	if code := a.ensureProxy(); code != 0 {
+		return code
+	}
+	if code := a.Run(compose("up", "-d")); code != 0 || a.dryRun {
 		return code
 	}
 	fmt.Fprintln(a.Stdout)

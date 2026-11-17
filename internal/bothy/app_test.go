@@ -35,9 +35,24 @@ func fakeApp(t *testing.T, withFile bool, codes ...int) (*App, *[][]string, *byt
 			codes = codes[1:]
 			return c
 		},
-		Output: func([]string) ([]byte, error) { return nil, nil },
+		Output:    fakeOutput(nil),
+		ConfigDir: filepath.Join(dir, "config"),
 	}
 	return a, &calls, &stdout, &stderr
+}
+
+// proxyUp is `docker compose ls` output with the bothy proxy running.
+const proxyUp = `[{"Name":"bothy-proxy","Status":"running(1)","ConfigFiles":"/cfg/proxy-compose.yml"}]`
+
+// fakeOutput answers `docker compose ls` with the proxy running, and every
+// other captured docker command with other.
+func fakeOutput(other []byte) func([]string) ([]byte, error) {
+	return func(args []string) ([]byte, error) {
+		if len(args) > 1 && args[0] == "compose" && args[1] == "ls" {
+			return []byte(proxyUp), nil
+		}
+		return other, nil
+	}
 }
 
 func words(s string) []string { return strings.Fields(s) }
