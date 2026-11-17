@@ -1,6 +1,7 @@
 package bothy
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,11 +10,12 @@ import (
 	"strings"
 )
 
-// The shared Traefik proxy that serves every app at <app>.bothy.localhost.
-// Apps opt in with traefik labels and by joining the "bothy" network.
+// The shared Traefik proxy that serves every app at
+// https://<app>.bothy.localhost. Apps opt in with traefik labels and by
+// joining the "bothy" network. HTTPS and the redirect from HTTP are set on
+// the proxy's entrypoints, so apps' labels don't mention TLS at all.
 const (
 	proxyProject = "bothy-proxy"
-	proxyNetwork = "bothy"
 	proxyCompose = `# Written by bothy on every start; edits here are overwritten.
 name: bothy-proxy
 services:
@@ -23,18 +25,33 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.network=bothy
+      - --providers.file.filename=/etc/traefik/dynamic.yml
       - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
       - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.http.tls=true
     ports:
       - "127.0.0.1:80:80"
       - "127.0.0.1:443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./certs:/certs:ro
     networks:
       - bothy
 networks:
   bothy:
     name: bothy
+`
+	// The mkcert certificate is the default for every HTTPS request.
+	proxyDynamic = `# Written by bothy on every start; edits here are overwritten.
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/` + certFile + `
+        keyFile: /certs/` + keyFile + `
 `
 )
 
@@ -81,21 +98,63 @@ func (a *App) proxyRunning() (bool, error) {
 	return false, nil
 }
 
-// ensureProxy starts the shared proxy unless it is already running.
+// writeIfChanged writes content to path and reports whether it differed
+// from what was there.
+func writeIfChanged(path, content string) (bool, error) {
+	old, err := os.ReadFile(path)
+	if err == nil && bytes.Equal(old, []byte(content)) {
+		return false, nil
+	}
+	return true, os.WriteFile(path, []byte(content), 0o644)
+}
+
+// writeProxyFiles writes the proxy's compose and traefik files, and reports
+// whether either changed, which means a running proxy needs recreating.
+func (a *App) writeProxyFiles() (bool, error) {
+	if err := os.MkdirAll(a.ConfigDir, 0o755); err != nil {
+		return false, err
+	}
+	c1, err := writeIfChanged(a.proxyFile(), proxyCompose)
+	if err != nil {
+		return false, err
+	}
+	c2, err := writeIfChanged(filepath.Join(a.ConfigDir, "traefik-dynamic.yml"), proxyDynamic)
+	return c1 || c2, err
+}
+
+// ensureProxy makes sure the shared proxy is running with bothy's current
+// settings and certificate.
 func (a *App) ensureProxy() int {
 	up := []string{"compose", "-f", a.proxyFile(), "up", "-d"}
 	if a.dryRun {
-		fmt.Fprintln(a.Stdout, "# only if the bothy proxy is not already running:")
+		fmt.Fprintln(a.Stdout, "# only if the bothy proxy is not already running with these settings:")
 		return a.Run(up)
+	}
+	code, newCert := a.ensureCert()
+	if code != 0 {
+		return code
+	}
+	changed, err := a.writeProxyFiles()
+	if err != nil {
+		fmt.Fprintf(a.Stderr, "bothy: writing the proxy's settings: %v\n", err)
+		return 1
 	}
 	running, err := a.proxyRunning()
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "bothy: %v\n", err)
 		return 1
 	}
-	if running {
+	switch {
+	case running && !changed && !newCert:
 		return 0
+	case running:
+		// It holds ports 80 and 443 itself, so skip the port check.
+		// --force-recreate because a new certificate alone doesn't change
+		// the compose file, and traefik only reads it at start.
+		fmt.Fprintln(a.Stdout, "Restarting the bothy proxy with its new settings")
+		return a.Run(append(up, "--force-recreate"))
 	}
+
 	holders, err := a.portHolders()
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "bothy: %v\n", err)
@@ -104,14 +163,6 @@ func (a *App) ensureProxy() int {
 	if len(holders) > 0 {
 		fmt.Fprintf(a.Stderr, "bothy: port 80 or 443, which the bothy proxy needs, is in use by: %s\n", strings.Join(holders, ", "))
 		fmt.Fprintln(a.Stderr, lando)
-		return 1
-	}
-	if err := os.MkdirAll(a.ConfigDir, 0o755); err != nil {
-		fmt.Fprintf(a.Stderr, "bothy: %v\n", err)
-		return 1
-	}
-	if err := os.WriteFile(a.proxyFile(), []byte(proxyCompose), 0o644); err != nil {
-		fmt.Fprintf(a.Stderr, "bothy: %v\n", err)
 		return 1
 	}
 	fmt.Fprintln(a.Stdout, "Starting the bothy proxy")

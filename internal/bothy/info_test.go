@@ -57,7 +57,7 @@ func TestInfo(t *testing.T) {
 	}
 	got := out.String()
 	for _, s := range []string{
-		"http://alpha.bothy.localhost",
+		"https://alpha.bothy.localhost",
 		"http://127.0.0.1:54123",
 		"127.0.0.1:4406  (database laravel, user laravel, password secret with spaces)",
 		"http://127.0.0.1:54124",

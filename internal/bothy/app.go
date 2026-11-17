@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // ComposeFile is the dev compose file bothy expects in the current folder.
@@ -41,6 +42,10 @@ type App struct {
 	// ConfigDir holds the files bothy writes for itself (the proxy's
 	// compose file).
 	ConfigDir string
+	// Mkcert runs mkcert; nil when it isn't installed.
+	Mkcert func(args ...string) error
+	// Now is the clock; nil means time.Now.
+	Now func() time.Time
 
 	dryRun bool
 }
@@ -106,6 +111,7 @@ func Main(args []string) int {
 		Output:      outputDocker,
 		Pipe:        pipeDocker,
 		ConfigDir:   filepath.Join(config, "bothy"),
+		Mkcert:      findMkcert(),
 	}
 	return a.Main(args)
 }

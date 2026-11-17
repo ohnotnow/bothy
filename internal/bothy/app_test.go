@@ -2,11 +2,19 @@ package bothy
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fakeApp returns an App in a temp dir that records docker calls instead of
@@ -37,8 +45,53 @@ func fakeApp(t *testing.T, withFile bool, codes ...int) (*App, *[][]string, *byt
 		},
 		Output:    fakeOutput(nil),
 		ConfigDir: filepath.Join(dir, "config"),
+		Mkcert:    fakeMkcert,
 	}
+	// the settled state: certificate made, proxy files current
+	if code, _ := a.ensureCert(); code != 0 {
+		t.Fatal("making the fake certificate failed")
+	}
+	if _, err := a.writeProxyFiles(); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
 	return a, &calls, &stdout, &stderr
+}
+
+// fakeMkcert writes a real self-signed certificate, valid for two years, and
+// a key file where `mkcert -cert-file C -key-file K host` would put them.
+func fakeMkcert(args ...string) error {
+	return writeCert(args, time.Now().Add(2*365*24*time.Hour))
+}
+
+func writeCert(args []string, notAfter time.Time) error {
+	var certPath, keyPath string
+	for i := 0; i+1 < len(args); i++ {
+		switch args[i] {
+		case "-cert-file":
+			certPath = args[i+1]
+		case "-key-file":
+			keyPath = args[i+1]
+		}
+	}
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return err
+	}
+	tmpl := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: certHost},
+		NotBefore:    notAfter.Add(-3 * 365 * 24 * time.Hour),
+		NotAfter:     notAfter,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o644); err != nil {
+		return err
+	}
+	return os.WriteFile(keyPath, []byte("fake key\n"), 0o600)
 }
 
 // proxyUp is `docker compose ls` output with the bothy proxy running.

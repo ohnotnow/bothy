@@ -44,6 +44,19 @@ func pipeDocker(args []string, stdin io.Reader, stdout io.Writer) int {
 	}
 }
 
+// findMkcert returns a function that runs mkcert, or nil if it isn't on PATH.
+func findMkcert() func(args ...string) error {
+	path, err := exec.LookPath("mkcert")
+	if err != nil {
+		return nil
+	}
+	return func(args ...string) error {
+		cmd := exec.Command(path, args...)
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		return cmd.Run()
+	}
+}
+
 func outputDocker(args []string) ([]byte, error) {
 	cmd := exec.Command("docker", args...)
 	cmd.Stderr = os.Stderr

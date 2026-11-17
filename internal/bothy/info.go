@@ -140,7 +140,7 @@ func (a *App) info() int {
 	}
 	w := tabwriter.NewWriter(a.Stdout, 0, 0, 2, ' ', 0)
 	for _, h := range hosts {
-		fmt.Fprintf(w, "app\thttp://%s\n", h)
+		fmt.Fprintf(w, "app\thttps://%s\n", h)
 	}
 	for _, p := range ps {
 		extra := ""
