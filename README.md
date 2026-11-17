@@ -35,11 +35,26 @@ The binaries aren't signed. A copy downloaded with a web browser from the [relea
 
 There are Linux builds too (`bothy-linux-amd64`, `bothy-linux-arm64`), but bothy has only been used on macOS so far. On Linux, expect file-ownership problems with the app's project folder: it is mounted into a container that runs as a different user, and that isn't solved yet.
 
-Or, with Go installed:
+### Build from source
+
+If your Mac won't run the downloaded binary (managed Macs often refuse unsigned ones), build it yourself. You need Go 1.27 or later (`brew install go`).
+
+The quickest way puts `bothy` in `~/go/bin`, which needs to be on your PATH:
 
 ```bash
 go install github.com/ohnotnow/bothy@latest
 ```
+
+Or clone and build, which lets you pick a release and puts the version number into `bothy version`:
+
+```bash
+git clone https://github.com/ohnotnow/bothy.git
+cd bothy
+git checkout v0.1.0    # or whichever release you want
+go build -ldflags "-X github.com/ohnotnow/bothy/internal/bothy.Version=$(git describe --tags --always)" -o bothy .
+```
+
+Then move `bothy` somewhere on your PATH. Without the `-ldflags` part it builds just the same, but `bothy version` says `dev`.
 
 ### Set up mkcert (once per Mac)
 
@@ -167,13 +182,7 @@ If your app's image inherits a healthcheck that only runs every 30 seconds, Trae
 
 ## Contributing
 
-Clone the repo, make your change, and run `go vet ./...` and `go test ./...` before opening a pull request.
-
-```bash
-git clone https://github.com/ohnotnow/bothy.git
-cd bothy
-go build -o bothy .
-```
+Clone the repo (see [Build from source](#build-from-source)), make your change, and run `go vet ./...` and `go test ./...` before opening a pull request.
 
 ## Licence
 
