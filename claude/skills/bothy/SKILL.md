@@ -20,6 +20,10 @@ docker command instead of running it.
   `compose.dev.yml`, and does not search parent folders.
 - Run things inside the stack through bothy, not raw `docker` or
   `docker compose`.
+- **Never read, copy or print mkcert's `rootCA-key.pem`** (in the folder
+  `mkcert -CAROOT` names). Whoever has it can intercept every secure
+  connection this Mac makes. bothy's own certificate files don't need
+  touching either; bothy renews them itself.
 
 ## Commands you can use
 
@@ -59,8 +63,16 @@ Work through these when helping someone start on a bothy app:
 - [ ] lando's proxy is not running (`lando poweroff`). It holds ports 80 and
       443, which the shared bothy proxy needs; `bothy start` says so if they
       are taken.
-- [ ] `APP_URL` in the app's `.env` is `http://<app>.bothy.localhost`, so
+- [ ] mkcert is set up: `brew install mkcert nss`, then `mkcert -install`
+      (asks for their password, as it adds a local certificate authority to
+      the keychain; restart Firefox afterwards). bothy makes and renews the
+      `*.bothy.localhost` certificate itself, with no password needed.
+- [ ] `APP_URL` in the app's `.env` is `https://<app>.bothy.localhost`, so
       links built outside a request (queued mail, artisan) are right.
+
+Each app gets one name, `<app>.bothy.localhost`. The certificate is a
+wildcard, and wildcards only cover one level, so a name like
+`thing.app.bothy.localhost` would fail with a certificate error.
 - [ ] **Asset watching.** The team does not use the vite dev server. Instead
       everyone has a shell alias, `wv`, which runs `npm run build` once, then
       reruns it with `watchman-make` whenever a file under `resources/`
