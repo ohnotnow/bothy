@@ -35,7 +35,7 @@ docker command instead of running it.
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
 | `bothy mfs` | `migrate:fresh`, then `db:seed --class=TestDataSeeder` |
 | `bothy npm <args>` | `npm <args>` in a throwaway `node` container |
-| `bothy db-export [file]` | dumps the database to a file (default `<folder>-<time>.sql.gz`; never overwrites) |
+| `bothy db-export [file]` | dumps the database to a file (default `<folder>-<date>-<time>.sql.gz`; never overwrites) |
 | `bothy info` | the app's addresses and ports, which Docker picks at random (read-only) |
 | `bothy ls` | lists running bothy projects (read-only) |
 | `bothy volumes` | lists every bothy volume and its size, running or not (read-only) |
@@ -69,13 +69,13 @@ Work through these when helping someone start on a bothy app:
       `*.bothy.localhost` certificate itself, with no password needed.
 - [ ] `APP_URL` in the app's `.env` is `https://<app>.bothy.localhost`, so
       links built outside a request (queued mail, artisan) are right.
-
-Each app gets one name, `<app>.bothy.localhost`. The certificate is a
-wildcard, and wildcards only cover one level, so a name like
-`thing.app.bothy.localhost` would fail with a certificate error.
 - [ ] **Asset watching.** The team does not use the vite dev server. Instead
       everyone has a shell alias, `wv`, which runs `npm run build` once, then
       reruns it with `watchman-make` whenever a file under `resources/`
       changes. It runs npm on the Mac, not in a container. Check the
       developer has `node`, `npm`, `watchman` and the `wv` alias; a developer
       new to the team will not have it.
+
+Each app gets one name, `<app>.bothy.localhost`. The certificate is a
+wildcard, and wildcards only cover one level, so a name like
+`thing.app.bothy.localhost` would fail with a certificate error.
