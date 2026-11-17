@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    # Don't raise PRs for releases younger than this many days, to dodge a
+    # freshly-poisoned version that gets yanked within hours or days.
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: gomod
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7  # the semver-*-days keys are ignored for gomod
