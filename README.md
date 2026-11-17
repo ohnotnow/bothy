@@ -112,7 +112,7 @@ bothy only runs in a folder with a `compose.dev.yml`. It doesn't look in parent 
 | `bothy npm <args>` | `npm <args>` in a throwaway `node` container |
 | `bothy shell` (or `ssh`) | a bash shell in `appserver` |
 | `bothy mysql` (or `database`) | a MariaDB client on the app's database, as root |
-| `bothy db-import <file>` | wipes the database, then loads a `.sql` or `.sql.gz` dump |
+| `bothy db-import <file>` | backs up the database, wipes it, then loads a `.sql` or `.sql.gz` dump (see [The database](#the-database)) |
 | `bothy db-export [file]` | dumps the database, by default to `<folder>-<date>-<time>.sql.gz`; never overwrites |
 
 These work from any folder:
@@ -134,6 +134,10 @@ bothy --dry-run mfs
 
 To use a GUI database client, `bothy info` shows the port and login. The port is random unless you pin it by setting `BOTHY_FORWARD_DB_PORT` in the app's `.env`, if the app's `compose.dev.yml` uses it as below.
 
+`bothy db-import` checks the dump before it touches anything: it refuses an empty file, and reads a `.gz` all the way through, so a truncated download fails before the wipe. Then it backs up the current database to the system's temp folder and prints the path, so if the import goes wrong, `bothy db-import <that path>` puts it back. If the database is over 1 GB it asks whether to skip the backup, and without a terminal to ask on it refuses to run.
+
+The temp folder clears itself, so copy the backup somewhere else if you want to keep it. On macOS that is `$TMPDIR`, where files are removed after a few days unused. On Linux it is usually `/tmp`, which many systems empty on reboot.
+
 ### Addresses
 
 Each app gets one name, `<app>.bothy.localhost`. The certificate is a wildcard, and wildcards only cover one level, so a name like `thing.myapp.bothy.localhost` fails with a certificate error.
@@ -144,7 +148,7 @@ bothy hard-codes a few conventions. An app's `compose.dev.yml` needs:
 
 - a project name ending in `-dev`, e.g. `name: myapp-dev` (this is how `bothy volumes` recognises its own volumes)
 - the PHP service named `appserver`
-- a MariaDB 10 service named `database`, configured with the `MARIADB_*` environment variables
+- a MariaDB 10 service named `database`, configured with the `MARIADB_*` environment variables, with its data in a named volume. Without one, MariaDB's image puts it in an anonymous volume, and the next `up` after `bothy stop` starts with an empty database
 - a `node` service, if you want `bothy npm`
 - three Traefik labels and the external `bothy` network on `appserver`, to be served by the proxy
 
@@ -167,11 +171,16 @@ services:
 
   database:
     image: mariadb:10.11
+    volumes:
+      - database:/var/lib/mysql      # named, so stop and rebuild keep the data
     ports:
       - "127.0.0.1:${BOTHY_FORWARD_DB_PORT:-}:3306"
 
   node:
     profiles: ["tools"]               # not started by `up`
+
+volumes:
+  database:
 
 networks:
   bothy:

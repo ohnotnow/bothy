@@ -42,6 +42,9 @@ type App struct {
 	// ConfigDir holds the files bothy writes for itself (the proxy's
 	// compose file).
 	ConfigDir string
+	// BackupDir is where db-import backs up the database before wiping it.
+	// The system temp folder, so the OS clears old backups away.
+	BackupDir string
 	// Mkcert runs mkcert; nil when it isn't installed.
 	Mkcert func(args ...string) error
 	// Now is the clock; nil means time.Now.
@@ -79,7 +82,7 @@ func init() {
 		{"ssh", "", "same as shell", true, cmdShell},
 		{"mysql", "", "open a mariadb client on the app's database, as root", true, cmdMysql},
 		{"database", "", "same as mysql", true, cmdMysql},
-		{"db-import", "<file>", "wipe the database and load a .sql or .sql.gz dump", true, cmdDbImport},
+		{"db-import", "<file>", "back up and wipe the database, then load a .sql or .sql.gz dump", true, cmdDbImport},
 		{"db-export", "[file]", "dump the database (default <folder>-<time>.sql.gz)", true, cmdDbExport},
 		{"ls", "", "list running bothy projects", false, cmdLs},
 		{"poweroff", "", "stop every running bothy project", false, cmdPoweroff},
@@ -111,6 +114,7 @@ func Main(args []string) int {
 		Output:      outputDocker,
 		Pipe:        pipeDocker,
 		ConfigDir:   filepath.Join(config, "bothy"),
+		BackupDir:   os.TempDir(),
 		Mkcert:      findMkcert(),
 	}
 	return a.Main(args)
