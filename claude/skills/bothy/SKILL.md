@@ -56,6 +56,11 @@ Work through these when helping someone start on a bothy app:
 - [ ] `bothy` is on their PATH (`bothy version`).
 - [ ] The app has a `compose.dev.yml`, and `bothy --dry-run start` shows the
       command it would run.
+- [ ] lando's proxy is not running (`lando poweroff`). It holds ports 80 and
+      443, which the shared bothy proxy needs; `bothy start` says so if they
+      are taken.
+- [ ] `APP_URL` in the app's `.env` is `http://<app>.bothy.localhost`, so
+      links built outside a request (queued mail, artisan) are right.
 - [ ] **Asset watching.** The team does not use the vite dev server. Instead
       everyone has a shell alias, `wv`, which runs `npm run build` once, then
       reruns it with `watchman-make` whenever a file under `resources/`
