@@ -106,7 +106,7 @@ bothy only runs in a folder with a `compose.dev.yml`. It doesn't look in parent 
 | `bothy composer <args>` | `composer <args>` in `appserver` |
 | `bothy test [args]` | `php artisan test [args]` |
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
-| `bothy mfs` | `migrate:fresh`, then `db:seed --class=TestDataSeeder` |
+| `bothy mfs [args]` | `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
 | `bothy horizon` | Horizon in the foreground (ctrl-c to stop) |
 | `bothy npm <args>` | `npm <args>` in a throwaway `node` container |
 | `bothy shell` (or `ssh`) | a bash shell in `appserver` |

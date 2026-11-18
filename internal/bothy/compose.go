@@ -3,6 +3,7 @@ package bothy
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -123,11 +124,24 @@ func cmdTestf(a *App, args []string) int {
 	return a.Run(a.artisan(append([]string{"test", "--filter", args[0]}, args[1:]...)...))
 }
 
+// cmdMfs runs migrate:fresh and seeds with TestDataSeeder. Its arguments go
+// to migrate:fresh, so `bothy mfs --seeder=OtherSeeder` seeds with another.
 func cmdMfs(a *App, args []string) int {
-	if len(args) > 0 {
-		return a.usageError("mfs takes no arguments")
+	x := []string{"migrate:fresh", "--seed"}
+	if !hasSeeder(args) {
+		x = append(x, "--seeder="+seeder)
 	}
-	return a.runAll(a.artisan("migrate:fresh"), a.artisan("db:seed", "--class="+seeder))
+	return a.Run(a.artisan(append(x, args...)...))
+}
+
+// hasSeeder reports whether args choose a seeder, as --seeder=X or --seeder X.
+func hasSeeder(args []string) bool {
+	for _, s := range args {
+		if s == "--seeder" || strings.HasPrefix(s, "--seeder=") {
+			return true
+		}
+	}
+	return false
 }
 
 func cmdHorizon(a *App, args []string) int {

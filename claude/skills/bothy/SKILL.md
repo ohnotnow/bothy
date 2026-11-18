@@ -33,7 +33,7 @@ docker command instead of running it.
 | `bothy composer <args>` | `composer <args>` in `appserver` |
 | `bothy test [args]` | `php artisan test [args]` |
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
-| `bothy mfs` | `migrate:fresh`, then `db:seed --class=TestDataSeeder` |
+| `bothy mfs [args]` | `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
 | `bothy npm <args>` | `npm <args>` in a throwaway `node` container |
 | `bothy db-export [file]` | dumps the database to a file (default `<folder>-<date>-<time>.sql.gz`; never overwrites) |
 | `bothy info` | the app's addresses and ports, which Docker picks at random (read-only) |

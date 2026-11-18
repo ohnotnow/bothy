@@ -213,28 +213,23 @@ func TestNoTerminalAddsNoTTYFlag(t *testing.T) {
 }
 
 func TestMfs(t *testing.T) {
-	t.Run("migrates then seeds", func(t *testing.T) {
+	const prefix = "compose -f compose.dev.yml exec appserver php artisan migrate:fresh --seed "
+	cases := []struct{ args, want string }{
+		{"mfs", "--seeder=TestDataSeeder"},
+		{"mfs --seeder=DemoSeeder", "--seeder=DemoSeeder"},
+		{"mfs --seeder DemoSeeder", "--seeder DemoSeeder"},
+		{"mfs --drop-views", "--seeder=TestDataSeeder --drop-views"},
+	}
+	for _, c := range cases {
 		a, calls, _, _ := fakeApp(t, true)
-		if code := a.Main([]string{"mfs"}); code != 0 {
-			t.Fatalf("exit %d", code)
+		if code := a.Main(words(c.args)); code != 0 {
+			t.Fatalf("%s: exit %d", c.args, code)
 		}
-		want := [][]string{
-			words("compose -f compose.dev.yml exec appserver php artisan migrate:fresh"),
-			words("compose -f compose.dev.yml exec appserver php artisan db:seed --class=TestDataSeeder"),
-		}
+		want := [][]string{words(prefix + c.want)}
 		if !reflect.DeepEqual(*calls, want) {
-			t.Fatalf("got %q, want %q", *calls, want)
+			t.Errorf("%s: got %q, want %q", c.args, *calls, want)
 		}
-	})
-	t.Run("does not seed when the migration fails", func(t *testing.T) {
-		a, calls, _, _ := fakeApp(t, true, 3)
-		if code := a.Main([]string{"mfs"}); code != 3 {
-			t.Fatalf("exit %d, want 3", code)
-		}
-		if len(*calls) != 1 {
-			t.Fatalf("got %d calls, want 1: %q", len(*calls), *calls)
-		}
-	})
+	}
 }
 
 func TestExitCodePassesThrough(t *testing.T) {
@@ -258,7 +253,7 @@ func TestMissingComposeFileBailsOut(t *testing.T) {
 }
 
 func TestUsageErrors(t *testing.T) {
-	for _, args := range [][]string{{"testf"}, {"mfs", "extra"}, {"nope"}, {}} {
+	for _, args := range [][]string{{"testf"}, {"nope"}, {}} {
 		a, calls, _, _ := fakeApp(t, true)
 		if code := a.Main(args); code != exitUsage {
 			t.Errorf("%q: exit %d, want %d", args, code, exitUsage)
@@ -277,8 +272,7 @@ func TestDryRunPrintsInsteadOfRunning(t *testing.T) {
 	if len(*calls) != 0 {
 		t.Fatalf("docker was called: %q", *calls)
 	}
-	want := "docker compose -f compose.dev.yml exec appserver php artisan migrate:fresh\n" +
-		"docker compose -f compose.dev.yml exec appserver php artisan db:seed --class=TestDataSeeder\n"
+	want := "docker compose -f compose.dev.yml exec appserver php artisan migrate:fresh --seed --seeder=TestDataSeeder\n"
 	if stdout.String() != want {
 		t.Fatalf("got %q, want %q", stdout, want)
 	}

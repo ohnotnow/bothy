@@ -139,7 +139,7 @@ func updateApp(t *testing.T, f *fakeRelease, stdin string) (a *App, tried *[]str
 	return a, &paths
 }
 
-func out(a *App) string { return a.Stdout.(interface{ String() string }).String() }
+func out(a *App) string    { return a.Stdout.(interface{ String() string }).String() }
 func errOut(a *App) string { return a.Stderr.(interface{ String() string }).String() }
 
 func exeContent(t *testing.T, a *App) string {
