@@ -70,6 +70,16 @@ mkcert -install
 
 After that, bothy makes its own `*.bothy.localhost` certificate the first time you run `bothy start`, and renews it by itself once it has less than 30 days left. Neither step asks for your password.
 
+### Install the Claude Code skill
+
+bothy carries a [Claude Code](https://claude.com/claude-code) skill that tells an agent how to work in an app run by bothy. It's built into the binary, so the skill always matches the bothy you have:
+
+```bash
+bothy install-skills
+```
+
+That copies it into `~/.claude/skills/bothy/`. It never deletes anything, and asks before replacing a copy you've changed (`d` at the prompt shows the difference). `--dry-run` shows what it would do, `--force` replaces without asking, and `--dir` installs under another folder, e.g. `--dir ~/.config/opencode` for another agent. `bothy version` says whether your installed copy is up to date.
+
 ### Start an app
 
 ```bash
@@ -123,6 +133,7 @@ These work from any folder:
 | `bothy volumes` | lists every bothy volume and its size, running or not |
 | `bothy version` | prints the version, and says if a newer release is out |
 | `bothy self-update` | replaces bothy with the latest release, after asking (see [Updating](#updating)) |
+| `bothy install-skills` | installs the Claude Code skill for this bothy (see [Install the Claude Code skill](#install-the-claude-code-skill)) |
 
 Put `--dry-run` before any command to see the docker commands without running them:
 
@@ -137,6 +148,8 @@ bothy --dry-run mfs
 After the swap it runs the new binary once. If that fails, which is what happens on a Mac that blocks downloaded binaries, it puts the old one back and points you at [Build from source](#build-from-source).
 
 A binary built from source isn't replaced: update it with `git pull` and `make install`.
+
+A new release may carry a changed skill too. After updating, `bothy install-skills --dry-run` shows whether it has.
 
 ### The database
 

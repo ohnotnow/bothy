@@ -63,6 +63,9 @@ func updateHint() string {
 
 func cmdVersion(a *App, _ []string) int {
 	fmt.Fprintln(a.Stdout, versionLine())
+	if a.Skills != nil {
+		fmt.Fprintln(a.Stdout, skillsStatus(a.Skills, a.ClaudeDir))
+	}
 	// A dev build has no version to compare. A failed lookup stays quiet:
 	// the version is what was asked for.
 	if Version == "dev" || a.ReleaseURL == "" {
@@ -200,6 +203,7 @@ func cmdSelfUpdate(a *App, args []string) int {
 		return 1
 	}
 	fmt.Fprintf(a.Stdout, "Updated to %s.\n", rel.TagName)
+	fmt.Fprintln(a.Stdout, "The skill may have changed too. Run 'bothy install-skills --dry-run' to see.")
 	return 0
 }
 

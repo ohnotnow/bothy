@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,6 +58,10 @@ type App struct {
 	Exe string
 	// TryBinary runs a freshly installed binary once to check it works.
 	TryBinary func(path string) error
+	// Skills is the built-in claude/ folder; nil when there is none.
+	Skills fs.FS
+	// ClaudeDir is where install-skills puts the skills (~/.claude).
+	ClaudeDir string
 
 	dryRun bool
 }
@@ -97,12 +102,14 @@ func init() {
 		{"volumes", "", "list every bothy volume and its size, running or not", false, cmdVolumes},
 		{"version", "", "print the version and say if a newer release is out", false, cmdVersion},
 		{"self-update", "[--check] [--yes]", "replace bothy with the latest release", false, cmdSelfUpdate},
+		{"install-skills", "[--dry-run] [--force] [--dir D]", "install the Claude Code skill for this bothy", false, cmdInstallSkills},
 		{"help", "", "show this help", false, cmdHelp},
 	}
 }
 
 // Main is the real entry point: it wires App to docker and the terminal.
-func Main(args []string) int {
+// skills is the built-in claude/ folder.
+func Main(args []string, skills fs.FS) int {
 	dir, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "bothy: %v\n", err)
@@ -128,6 +135,8 @@ func Main(args []string) int {
 		ReleaseURL:  LatestReleaseAPI,
 		Exe:         executable(),
 		TryBinary:   tryBinary,
+		Skills:      skills,
+		ClaudeDir:   DefaultClaudeDir(),
 	}
 	return a.Main(args)
 }
