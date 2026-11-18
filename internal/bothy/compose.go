@@ -1,10 +1,8 @@
 package bothy
 
 import (
-	"bufio"
 	"fmt"
 	"path/filepath"
-	"strings"
 )
 
 const (
@@ -94,9 +92,7 @@ func cmdDestroy(a *App, args []string) int {
 			fmt.Fprintln(a.Stderr, "bothy: destroy asks before deleting anything, so it needs a terminal")
 			return 1
 		}
-		fmt.Fprintf(a.Stdout, "This stops %s and deletes its volumes, including the database. Are you sure? [y/N] ", filepath.Base(a.Dir))
-		answer, _ := bufio.NewReader(a.Stdin).ReadString('\n')
-		if ans := strings.ToLower(strings.TrimSpace(answer)); ans != "y" && ans != "yes" {
+		if !a.askYes(fmt.Sprintf("This stops %s and deletes its volumes, including the database. Are you sure?", filepath.Base(a.Dir))) {
 			fmt.Fprintln(a.Stdout, "Nothing deleted.")
 			return 1
 		}

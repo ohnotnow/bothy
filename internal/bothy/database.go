@@ -1,7 +1,6 @@
 package bothy
 
 import (
-	"bufio"
 	"compress/gzip"
 	"errors"
 	"fmt"
@@ -175,9 +174,7 @@ func (a *App) backupBeforeWipe(backup string) int {
 			fmt.Fprintf(a.Stderr, "bothy: the current database is about %s, so db-import asks before backing it up, and there is no terminal to ask on. Run it from a terminal.\n", humanBytes(size))
 			return 1
 		}
-		fmt.Fprintf(a.Stdout, "The current database is about %s, so a backup before the wipe could take a while and use a lot of disk. Skip the backup? [y/N] ", humanBytes(size))
-		answer, _ := bufio.NewReader(a.Stdin).ReadString('\n')
-		if ans := strings.ToLower(strings.TrimSpace(answer)); ans == "y" || ans == "yes" {
+		if a.askYes(fmt.Sprintf("The current database is about %s, so a backup before the wipe could take a while and use a lot of disk. Skip the backup?", humanBytes(size))) {
 			fmt.Fprintln(a.Stdout, "Not backing up.")
 			return 0
 		}

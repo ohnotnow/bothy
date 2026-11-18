@@ -49,6 +49,8 @@ jobs:
           GOOS=darwin GOARCH=arm64 go build -ldflags="$LDFLAGS" -o dist/bothy-darwin-arm64 .
           GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o dist/bothy-linux-amd64 .
           GOOS=linux GOARCH=arm64 go build -ldflags="$LDFLAGS" -o dist/bothy-linux-arm64 .
+          # self-update checks its download against this
+          cd dist && sha256sum bothy-* > SHA256SUMS
 
       - name: Create release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2

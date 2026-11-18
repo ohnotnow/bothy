@@ -3,6 +3,7 @@
 package bothy
 
 import (
+	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -49,6 +50,13 @@ type App struct {
 	Mkcert func(args ...string) error
 	// Now is the clock; nil means time.Now.
 	Now func() time.Time
+	// ReleaseURL is the GitHub API address of the latest release; empty
+	// skips the version check.
+	ReleaseURL string
+	// Exe is the path of the running binary, which self-update replaces.
+	Exe string
+	// TryBinary runs a freshly installed binary once to check it works.
+	TryBinary func(path string) error
 
 	dryRun bool
 }
@@ -87,7 +95,8 @@ func init() {
 		{"ls", "", "list running bothy projects", false, cmdLs},
 		{"poweroff", "", "stop every running bothy project", false, cmdPoweroff},
 		{"volumes", "", "list every bothy volume and its size, running or not", false, cmdVolumes},
-		{"version", "", "print the version", false, cmdVersion},
+		{"version", "", "print the version and say if a newer release is out", false, cmdVersion},
+		{"self-update", "[--check] [--yes]", "replace bothy with the latest release", false, cmdSelfUpdate},
 		{"help", "", "show this help", false, cmdHelp},
 	}
 }
@@ -116,6 +125,9 @@ func Main(args []string) int {
 		ConfigDir:   filepath.Join(config, "bothy"),
 		BackupDir:   os.TempDir(),
 		Mkcert:      findMkcert(),
+		ReleaseURL:  LatestReleaseAPI,
+		Exe:         executable(),
+		TryBinary:   tryBinary,
 	}
 	return a.Main(args)
 }
@@ -166,6 +178,15 @@ func (a *App) hasComposeFile() bool {
 	return err == nil && !info.IsDir()
 }
 
+// askYes prints question with a [y/N] prompt and reports whether the answer
+// was y or yes. Anything else, including no answer, is no.
+func (a *App) askYes(question string) bool {
+	fmt.Fprint(a.Stdout, question+" [y/N] ")
+	answer, _ := bufio.NewReader(a.Stdin).ReadString('\n')
+	ans := strings.ToLower(strings.TrimSpace(answer))
+	return ans == "y" || ans == "yes"
+}
+
 func (a *App) usageError(format string, args ...any) int {
 	fmt.Fprintf(a.Stderr, "bothy: "+format+"\n", args...)
 	return exitUsage
@@ -191,9 +212,17 @@ func cmdHelp(a *App, _ []string) int {
 	return 0
 }
 
-func cmdVersion(a *App, _ []string) int {
-	fmt.Fprintf(a.Stdout, "bothy %s\n", Version)
-	return 0
+// executable is the real path of the running binary, symlinks resolved, or
+// "" if it can't be found.
+func executable() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	if real, err := filepath.EvalSymlinks(exe); err == nil {
+		return real
+	}
+	return exe
 }
 
 // shellJoin renders args as a command line a person could paste.

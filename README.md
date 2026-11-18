@@ -17,7 +17,7 @@ It is built for a particular setup (Laravel on a FrankenPHP image, MariaDB, a `c
 - macOS with [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Linux builds exist but are untested, see below)
 - [mkcert](https://github.com/FiloSottile/mkcert), installed with Homebrew (see below)
 - An app with a `compose.dev.yml` set up the way bothy expects (see [The compose.dev.yml bothy expects](#the-composedevyml-bothy-expects))
-- Go 1.27 or later, only if you install with `go install` or want to work on bothy itself
+- Go 1.27 or later, only if you build bothy from source
 
 ## Getting started
 
@@ -33,28 +33,27 @@ chmod +x bothy
 
 The binaries aren't signed. A copy downloaded with a web browser from the [releases page](https://github.com/ohnotnow/bothy/releases) is likely to be blocked by macOS; curl doesn't mark the file that way.
 
+After that, `bothy self-update` fetches and installs new releases (see [Updating](#updating)).
+
 There are Linux builds too (`bothy-linux-amd64`, `bothy-linux-arm64`), but bothy has only been used on macOS so far. On Linux, expect file-ownership problems with the app's project folder: it is mounted into a container that runs as a different user, and that isn't solved yet.
 
 ### Build from source
 
 If your Mac won't run the downloaded binary (managed Macs often refuse unsigned ones), build it yourself. You need Go 1.27 or later (`brew install go`).
 
-The quickest way puts `bothy` in `~/go/bin`, which needs to be on your PATH:
-
-```bash
-go install github.com/ohnotnow/bothy@latest
-```
-
-Or clone and build, which lets you pick a release and puts the version number into `bothy version`:
+Clone the repo and run `make install`:
 
 ```bash
 git clone https://github.com/ohnotnow/bothy.git
 cd bothy
-git checkout v0.1.0    # or whichever release you want
-go build -ldflags "-X github.com/ohnotnow/bothy/internal/bothy.Version=$(git describe --tags --always)" -o bothy .
+make install
 ```
 
-Then move `bothy` somewhere on your PATH. Without the `-ldflags` part it builds just the same, but `bothy version` says `dev`.
+That puts `bothy` in `~/.local/bin`, the folder the [XDG Base Directory spec](https://specifications.freedesktop.org/basedir-spec/latest/) names for a user's own programs. If that folder isn't on your PATH yet, `make install` prints the line to add to `~/.zshrc`. To install somewhere else, run `make install PREFIX=/somewhere` and it goes in `/somewhere/bin`.
+
+The binary records its version from git and the date it was built, so `bothy version` can tell you when there is a newer release. To update, run `git pull` and `make install` again. `bothy self-update` leaves a binary built this way alone.
+
+`go install github.com/ohnotnow/bothy@latest` also works, and puts `bothy` in `~/go/bin`. A binary built that way says `dev` in `bothy version`, can't tell you about new releases, and is updated by running the same command again.
 
 ### Set up mkcert (once per Mac)
 
@@ -122,13 +121,22 @@ These work from any folder:
 | `bothy ls` | lists running bothy projects |
 | `bothy poweroff` | stops every running bothy project and the proxy |
 | `bothy volumes` | lists every bothy volume and its size, running or not |
-| `bothy version` | prints the version |
+| `bothy version` | prints the version, and says if a newer release is out |
+| `bothy self-update` | replaces bothy with the latest release, after asking (see [Updating](#updating)) |
 
 Put `--dry-run` before any command to see the docker commands without running them:
 
 ```bash
 bothy --dry-run mfs
 ```
+
+### Updating
+
+`bothy self-update` downloads the latest release for your machine, checks it against the release's `SHA256SUMS` file, and swaps it in. It shows the release notes and asks first; `--yes` skips the question, and `--check` only reports, exiting 0 when you're up to date, 1 when a newer release is out and 2 when it couldn't find out.
+
+After the swap it runs the new binary once. If that fails, which is what happens on a Mac that blocks downloaded binaries, it puts the old one back and points you at [Build from source](#build-from-source).
+
+A binary built from source isn't replaced: update it with `git pull` and `make install`.
 
 ### The database
 
