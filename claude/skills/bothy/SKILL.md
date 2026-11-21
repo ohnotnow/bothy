@@ -95,6 +95,8 @@ Work through these when helping someone start on a bothy app:
       compare npm versions: the image's bundled npm is often older than the
       developer's own guidance asks for.
 
-Each app gets one name, `<app>.bothy.localhost`. The certificate is a
-wildcard, and wildcards only cover one level, so a name like
-`thing.app.bothy.localhost` would fail with a certificate error.
+The app is at `<app>.bothy.localhost`, and its mail catcher, where the app's
+`compose.dev.yml` gives it Traefik labels, at `mail-<app>.bothy.localhost`.
+`bothy info` lists every address. The certificate is a wildcard, and
+wildcards only cover one level, so a name like `mail.app.bothy.localhost`
+would fail with a certificate error.

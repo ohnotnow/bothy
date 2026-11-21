@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"text/tabwriter"
 )
@@ -21,13 +22,29 @@ type published struct {
 	Target  int
 }
 
+// routed is a hostname the proxy sends to one of the app's services.
+type routed struct {
+	Service string
+	Host    string
+}
+
+// label is what info calls a routed hostname: "app" for the app server,
+// otherwise the service's name (e.g. the mail catcher at mail-<app>).
+func (r routed) label() string {
+	if r.Service == appService {
+		return "app"
+	}
+	return r.Service
+}
+
 // traefikHost finds the hostnames in traefik router rules: Host(`x`).
 var traefikHost = regexp.MustCompile("Host\\(`([^`]+)`\\)")
 
 // parsePublished reads `docker compose ps --format json`, which prints one
 // JSON object per line, and returns each port published on the host and
-// every hostname the proxy routes to the app.
-func parsePublished(out []byte) ([]published, []string, error) {
+// every hostname the proxy routes to the app's services, the app server's
+// first.
+func parsePublished(out []byte) ([]published, []routed, error) {
 	type row struct {
 		Service    string
 		Labels     string
@@ -64,13 +81,13 @@ func parsePublished(out []byte) ([]published, []string, error) {
 	}
 
 	var found []published
-	var hosts []string
+	var hosts []routed
 	seen := map[string]bool{}
 	for _, r := range rows {
 		for _, m := range traefikHost.FindAllStringSubmatch(r.Labels, -1) {
 			if !seen["host/"+m[1]] {
 				seen["host/"+m[1]] = true
-				hosts = append(hosts, m[1])
+				hosts = append(hosts, routed{r.Service, m[1]})
 			}
 		}
 		for _, p := range r.Publishers {
@@ -85,6 +102,9 @@ func parsePublished(out []byte) ([]published, []string, error) {
 			found = append(found, published{r.Service, p.URL, p.PublishedPort, p.TargetPort})
 		}
 	}
+	sort.SliceStable(hosts, func(i, j int) bool {
+		return hosts[i].Service == appService && hosts[j].Service != appService
+	})
 	return found, hosts, nil
 }
 
@@ -140,7 +160,7 @@ func (a *App) info() int {
 	}
 	w := tabwriter.NewWriter(a.Stdout, 0, 0, 2, ' ', 0)
 	for _, h := range hosts {
-		fmt.Fprintf(w, "app\thttps://%s\n", h)
+		fmt.Fprintf(w, "%s\thttps://%s\n", h.label(), h.Host)
 	}
 	for _, p := range ps {
 		extra := ""

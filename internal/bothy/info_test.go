@@ -12,7 +12,7 @@ import (
 const psOutput = `{"Service":"appserver","State":"running","Labels":"com.docker.compose.project=alpha-dev,traefik.enable=true,traefik.http.routers.alpha.rule=Host(` + "`alpha.bothy.localhost`" + `),traefik.http.services.alpha.loadbalancer.server.port=6060","Publishers":[{"URL":"127.0.0.1","TargetPort":6060,"PublishedPort":54123,"Protocol":"tcp"}]}
 {"Service":"cache","State":"running","Publishers":[{"URL":"","TargetPort":6379,"PublishedPort":0,"Protocol":"tcp"}]}
 {"Service":"database","State":"running","Publishers":[{"URL":"127.0.0.1","TargetPort":3306,"PublishedPort":4406,"Protocol":"tcp"}]}
-{"Service":"sendmailhog","State":"running","Publishers":[{"URL":"0.0.0.0","TargetPort":8025,"PublishedPort":54124,"Protocol":"tcp"},{"URL":"::","TargetPort":8025,"PublishedPort":54124,"Protocol":"tcp"},{"URL":"","TargetPort":1025,"PublishedPort":0,"Protocol":"tcp"}]}
+{"Service":"sendmailhog","State":"running","Labels":"com.docker.compose.project=alpha-dev,traefik.enable=true,traefik.http.routers.mail-alpha.rule=Host(` + "`mail-alpha.bothy.localhost`" + `),traefik.http.services.mail-alpha.loadbalancer.server.port=8025","Publishers":[{"URL":"0.0.0.0","TargetPort":8025,"PublishedPort":54124,"Protocol":"tcp"},{"URL":"::","TargetPort":8025,"PublishedPort":54124,"Protocol":"tcp"},{"URL":"","TargetPort":1025,"PublishedPort":0,"Protocol":"tcp"}]}
 `
 
 func TestParsePublished(t *testing.T) {
@@ -20,8 +20,9 @@ func TestParsePublished(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(hosts, []string{"alpha.bothy.localhost"}) {
-		t.Fatalf("hosts %q", hosts)
+	wantHosts := []routed{{"appserver", "alpha.bothy.localhost"}, {"sendmailhog", "mail-alpha.bothy.localhost"}}
+	if !reflect.DeepEqual(hosts, wantHosts) {
+		t.Fatalf("hosts %+v, want %+v", hosts, wantHosts)
 	}
 	want := []published{
 		{"appserver", "127.0.0.1", 54123, 6060},
@@ -30,6 +31,20 @@ func TestParsePublished(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestParsePublishedPutsTheAppFirst(t *testing.T) {
+	// compose ps lists services by name, so one sorting before appserver
+	// must not push the app's own address down the list
+	lines := strings.Split(strings.TrimSpace(psOutput), "\n")
+	admin := strings.Replace(lines[3], `"Service":"sendmailhog"`, `"Service":"adminer"`, 1)
+	_, hosts, err := parsePublished([]byte(admin + "\n" + lines[0] + "\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hosts) != 2 || hosts[0].Service != "appserver" {
+		t.Fatalf("hosts %+v, want appserver first", hosts)
 	}
 }
 
@@ -57,7 +72,7 @@ func TestInfo(t *testing.T) {
 	}
 	got := out.String()
 	for _, s := range []string{
-		"https://alpha.bothy.localhost",
+		"app          https://alpha.bothy.localhost\nsendmailhog  https://mail-alpha.bothy.localhost\n",
 		"http://127.0.0.1:54123",
 		"127.0.0.1:4406  (database laravel, user laravel, password secret with spaces)",
 		"http://127.0.0.1:54124",

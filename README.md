@@ -91,6 +91,7 @@ bothy start
 
 ```
 app          https://myapp.bothy.localhost
+sendmailhog  https://mail-myapp.bothy.localhost
 appserver    http://127.0.0.1:54123
 database     127.0.0.1:54187  (database myapp, user myapp, password secret)
 sendmailhog  http://127.0.0.1:54124
@@ -161,7 +162,9 @@ The temp folder clears itself, so copy the backup somewhere else if you want to 
 
 ### Addresses
 
-Each app gets one name, `<app>.bothy.localhost`. The certificate is a wildcard, and wildcards only cover one level, so a name like `thing.myapp.bothy.localhost` fails with a certificate error.
+The app itself is at `<app>.bothy.localhost`. Other services can have an address of their own too: give them Traefik labels and the `bothy` network as for `appserver`, with router and service names that won't clash with another app's. Converted apps put the mail catcher at `mail-<app>.bothy.localhost`, the same naming as the team's QA servers. `bothy info` lists each address under its service's name, and the app's as `app`.
+
+The certificate is a wildcard, and wildcards only cover one level, so the extra part goes in front with a dash (`mail-myapp`), never as a dot: `mail.myapp.bothy.localhost` fails with a certificate error.
 
 ## The compose.dev.yml bothy expects
 
