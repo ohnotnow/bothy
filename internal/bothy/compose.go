@@ -7,9 +7,8 @@ import (
 )
 
 const (
-	appService  = "appserver"
-	nodeService = "node"
-	seeder      = "TestDataSeeder"
+	appService = "appserver"
+	seeder     = "TestDataSeeder"
 )
 
 // compose prefixes args with the dev compose file.
@@ -146,12 +145,6 @@ func hasSeeder(args []string) bool {
 
 func cmdHorizon(a *App, args []string) int {
 	return a.Run(a.artisan(append([]string{"horizon"}, args...)...))
-}
-
-func cmdNpm(a *App, args []string) int {
-	x := append([]string{"run", "--rm"}, a.noTTY()...)
-	x = append(x, nodeService, "npm")
-	return a.Run(compose(append(x, args...)...))
 }
 
 func cmdShell(a *App, args []string) int {

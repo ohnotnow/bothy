@@ -49,6 +49,9 @@ type App struct {
 	BackupDir string
 	// Mkcert runs mkcert; nil when it isn't installed.
 	Mkcert func(args ...string) error
+	// Npm runs npm on this machine (not in a container) and returns its
+	// exit code; nil when it isn't installed. Used by watch.
+	Npm func(args ...string) int
 	// Now is the clock; nil means time.Now.
 	Now func() time.Time
 	// ReleaseURL is the GitHub API address of the latest release; empty
@@ -90,7 +93,7 @@ func init() {
 		{"testf", "<filter> [args]", "run the tests matching a filter", true, cmdTestf},
 		{"mfs", "[args]", "migrate:fresh, seeding with TestDataSeeder (or --seeder=X)", true, cmdMfs},
 		{"horizon", "", "run horizon in the foreground (ctrl-c to stop)", true, cmdHorizon},
-		{"npm", "<args>", "run npm in the node container", true, cmdNpm},
+		{"watch", "[--every N]", "npm run build on this machine, again whenever resources/ changes", true, cmdWatch},
 		{"shell", "", "open a shell in the app container", true, cmdShell},
 		{"ssh", "", "same as shell", true, cmdShell},
 		{"mysql", "", "open a mariadb client on the app's database, as root", true, cmdMysql},
@@ -132,6 +135,7 @@ func Main(args []string, skills fs.FS) int {
 		ConfigDir:   filepath.Join(config, "bothy"),
 		BackupDir:   os.TempDir(),
 		Mkcert:      findMkcert(),
+		Npm:         findNpm(dir),
 		ReleaseURL:  LatestReleaseAPI,
 		Exe:         executable(),
 		TryBinary:   tryBinary,

@@ -1,13 +1,14 @@
 ---
 name: bothy
-description: Working in a Laravel app that runs under bothy (a compose.dev.yml in the project folder, no .lando.yml in use). Use when you need to run artisan, composer, npm, tests or tinker in such an app, or when setting up a developer's machine for one.
+description: Working in a Laravel app that runs under bothy (a compose.dev.yml in the project folder, no .lando.yml in use). Use when you need to run artisan, composer, tests or tinker in such an app, or when setting up a developer's machine for one.
 ---
 
 # bothy
 
 bothy is a small wrapper over `docker compose -f compose.dev.yml`. Each
-command is one compose call; `bothy --dry-run <command>` prints the exact
-docker command instead of running it.
+command is one compose call, apart from `watch`, which runs npm on the Mac;
+`bothy --dry-run <command>` prints the exact docker command instead of
+running it.
 
 ## The rules for agents
 
@@ -16,6 +17,14 @@ docker command instead of running it.
   and ask them to start it.
 - **Never run `bothy db-import`.** It wipes the app's database before loading
   the dump.
+- **Never run `bothy watch`.** It runs `npm run build` on the developer's Mac,
+  outside any container, and the app's `package.json` decides what that
+  runs. It also runs until stopped.
+- **Before installing or updating packages** (npm, composer, uv or any
+  other), look for the developer's own guidance on package-manager versions
+  and supply-chain settings, such as their global `CLAUDE.md`. This skill
+  deliberately has none. If you find none either, say so to the developer
+  before going ahead, rather than guessing at settings.
 - Run bothy from the app's top folder. It refuses to run anywhere without a
   `compose.dev.yml`, and does not search parent folders.
 - Run things inside the stack through bothy, not raw `docker` or
@@ -34,7 +43,6 @@ docker command instead of running it.
 | `bothy test [args]` | `php artisan test [args]` |
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
 | `bothy mfs [args]` | `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
-| `bothy npm <args>` | `npm <args>` in a throwaway `node` container |
 | `bothy db-export [file]` | dumps the database to a file (default `<folder>-<date>-<time>.sql.gz`; never overwrites) |
 | `bothy info` | the app's addresses and ports, which Docker picks at random (read-only) |
 | `bothy ls` | lists running bothy projects (read-only) |
@@ -49,8 +57,11 @@ password to look up. Don't go looking in `compose.dev.yml` or `.env` for one.
 (`bothy info` does print the app's database login, for the developer's GUI
 client. It is a local development password.)
 
-Without a terminal (as when an agent runs it), bothy adds `-T` to `exec` and
-`run` by itself. You do not need to.
+Without a terminal (as when an agent runs it), bothy adds `-T` to `exec` by
+itself. You do not need to.
+
+npm runs on the Mac, not through bothy: run `npm` directly in the app's
+folder (but see the package-manager rule above).
 
 ## Checklist: a developer's machine
 
@@ -70,11 +81,19 @@ Work through these when helping someone start on a bothy app:
 - [ ] `APP_URL` in the app's `.env` is `https://<app>.bothy.localhost`, so
       links built outside a request (queued mail, artisan) are right.
 - [ ] **Asset watching.** The team does not use the vite dev server. Instead
-      everyone has a shell alias, `wv`, which runs `npm run build` once, then
-      reruns it with `watchman-make` whenever a file under `resources/`
-      changes. It runs npm on the Mac, not in a container. Check the
-      developer has `node`, `npm`, `watchman` and the `wv` alias; a developer
-      new to the team will not have it.
+      the developer runs `bothy watch`, which runs `npm run build` once, then
+      again whenever a file under `resources/` changes (`--every 5` checks
+      every five seconds instead of every second). It runs npm on the Mac,
+      not in a container, because the Mac's `node_modules` holds Mac-only
+      native binaries. Check the developer has `node` and `npm`, and see the
+      package-manager rule above.
+- [ ] **The Mac's node matches the app's.** Compare the major version from
+      `node --version` with the `FROM node:<major>` line in the app's
+      `Dockerfile` (the stage that builds the production assets). If they
+      differ, tell the developer both versions: their local builds use a
+      different node from the one that ships. Leave the fix to them. Don't
+      compare npm versions: the image's bundled npm is often older than the
+      developer's own guidance asks for.
 
 Each app gets one name, `<app>.bothy.localhost`. The certificate is a
 wildcard, and wildcards only cover one level, so a name like

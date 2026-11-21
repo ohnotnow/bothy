@@ -124,7 +124,6 @@ func TestCommandsExpand(t *testing.T) {
 		{words("test --parallel"), words("compose -f compose.dev.yml exec appserver php artisan test --parallel")},
 		{words("testf UserTest --stop-on-failure"), words("compose -f compose.dev.yml exec appserver php artisan test --filter UserTest --stop-on-failure")},
 		{words("horizon"), words("compose -f compose.dev.yml exec appserver php artisan horizon")},
-		{words("npm run build"), words("compose -f compose.dev.yml run --rm node npm run build")},
 		{words("shell"), words("compose -f compose.dev.yml exec appserver bash")},
 		{words("ssh"), words("compose -f compose.dev.yml exec appserver bash")},
 	}
@@ -202,10 +201,8 @@ func TestNoTerminalAddsNoTTYFlag(t *testing.T) {
 	a, calls, _, _ := fakeApp(t, true)
 	a.Interactive = false
 	a.Main(words("artisan about"))
-	a.Main(words("npm ci"))
 	want := [][]string{
 		words("compose -f compose.dev.yml exec -T appserver php artisan about"),
-		words("compose -f compose.dev.yml run --rm -T node npm ci"),
 	}
 	if !reflect.DeepEqual(*calls, want) {
 		t.Fatalf("got %q, want %q", *calls, want)

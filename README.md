@@ -118,7 +118,7 @@ bothy only runs in a folder with a `compose.dev.yml`. It doesn't look in parent 
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
 | `bothy mfs [args]` | `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
 | `bothy horizon` | Horizon in the foreground (ctrl-c to stop) |
-| `bothy npm <args>` | `npm <args>` in a throwaway `node` container |
+| `bothy watch [--every N]` | `npm run build` on this machine (not in a container), then again whenever a file under `resources/` changes; checks every second, or every N seconds (e.g. `0.5`); ctrl-c to stop |
 | `bothy shell` (or `ssh`) | a bash shell in `appserver` |
 | `bothy mysql` (or `database`) | a MariaDB client on the app's database, as root |
 | `bothy db-import <file>` | backs up the database, wipes it, then loads a `.sql` or `.sql.gz` dump (see [The database](#the-database)) |
@@ -170,7 +170,6 @@ bothy hard-codes a few conventions. An app's `compose.dev.yml` needs:
 - a project name ending in `-dev`, e.g. `name: myapp-dev` (this is how `bothy volumes` recognises its own volumes)
 - the PHP service named `appserver`
 - a MariaDB 10 service named `database`, configured with the `MARIADB_*` environment variables, with its data in a named volume. Without one, MariaDB's image puts it in an anonymous volume, and the next `up` after `bothy stop` starts with an empty database
-- a `node` service, if you want `bothy npm`
 - three Traefik labels and the external `bothy` network on `appserver`, to be served by the proxy
 
 Trimmed to the parts bothy cares about:
@@ -196,9 +195,6 @@ services:
       - database:/var/lib/mysql      # named, so stop and rebuild keep the data
     ports:
       - "127.0.0.1:${BOTHY_FORWARD_DB_PORT:-}:3306"
-
-  node:
-    profiles: ["tools"]               # not started by `up`
 
 volumes:
   database:
