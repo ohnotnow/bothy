@@ -67,6 +67,8 @@ type App struct {
 	ClaudeDir string
 
 	dryRun bool
+	// bind is what start or rebuild set BOTHY_BIND to; "" for other commands.
+	bind string
 }
 
 type command struct {
@@ -81,10 +83,10 @@ var commands []command
 
 func init() {
 	commands = []command{
-		{"start", "", "start the app's stack", true, cmdStart},
+		{"start", "[--lan]", "start the app's stack (--lan opens it to the network)", true, cmdStart},
 		{"stop", "", "stop the app's stack", true, cmdStop},
 		{"info", "", "show the app's addresses and ports", true, cmdInfo},
-		{"rebuild", "", "stop, rebuild with fresh base images, start (keeps the data)", true, cmdRebuild},
+		{"rebuild", "[--lan]", "stop, rebuild with fresh base images, start (keeps the data)", true, cmdRebuild},
 		{"destroy", "", "stop and delete the app's volumes, including the database (asks first)", true, cmdDestroy},
 		{"artisan", "<args>", "run php artisan in the app container", true, cmdArtisan},
 		{"tinker", "", "open tinker", true, cmdTinker},
@@ -161,7 +163,11 @@ func (a *App) Main(args []string) int {
 	if *dryRun {
 		a.dryRun = true
 		a.Run = func(args []string) int {
-			fmt.Fprintln(a.Stdout, shellJoin(append([]string{"docker"}, args...)))
+			line := append([]string{"docker"}, args...)
+			if a.bind != "" {
+				line = append([]string{bindEnv + "=" + a.bind}, line...)
+			}
+			fmt.Fprintln(a.Stdout, shellJoin(line))
 			return 0
 		}
 	}

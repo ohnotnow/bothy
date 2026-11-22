@@ -80,6 +80,13 @@ Work through these when helping someone start on a bothy app:
       `*.bothy.localhost` certificate itself, with no password needed.
 - [ ] `APP_URL` in the app's `.env` is `https://<app>.bothy.localhost`, so
       links built outside a request (queued mail, artisan) are right.
+- [ ] **Only loopback by default.** In `compose.dev.yml`, the app server's
+      and mail catcher's ports are published on `${BOTHY_BIND:-127.0.0.1}`
+      (e.g. `"${BOTHY_BIND:-127.0.0.1}::6060"`), and every other service's on
+      `127.0.0.1`. The developer opens the first two to the network with
+      `bothy start --lan`, and the next plain `bothy start` closes them
+      again. If `bothy info` marks a port "(open to the network)" and the
+      developer didn't ask for that, tell them which service and which line.
 - [ ] **Asset watching.** The team does not use the vite dev server. Instead
       the developer runs `bothy watch`, which runs `npm run build` once, then
       again whenever a file under `resources/` changes (`--every 5` checks

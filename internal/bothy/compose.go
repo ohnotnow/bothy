@@ -1,7 +1,10 @@
 package bothy
 
 import (
+	"flag"
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -35,9 +38,42 @@ func (a *App) artisan(args ...string) []string {
 	return a.inApp(append([]string{"php", "artisan"}, args...)...)
 }
 
+// BOTHY_BIND is the host address an app's compose.dev.yml publishes its app
+// server and mail catcher on: "${BOTHY_BIND:-127.0.0.1}::6060".
+const (
+	bindEnv  = "BOTHY_BIND"
+	loopback = "127.0.0.1"
+	anyAddr  = "0.0.0.0"
+)
+
+// parseLan reads the one flag start and rebuild take, --lan, and sets
+// BOTHY_BIND for compose: 0.0.0.0 with --lan, 127.0.0.1 without. bothy always
+// sets it, so a value left in the shell or the app's .env can't open the app
+// to the network without the developer asking each time.
+func (a *App) parseLan(name string, args []string) int {
+	fs := flag.NewFlagSet(name, flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	lan := fs.Bool("lan", false, "open the app server and mail catcher to the network")
+	if err := fs.Parse(args); err != nil {
+		return a.usageError("%s: %v", name, err)
+	}
+	if fs.NArg() > 0 {
+		return a.usageError("%s takes no arguments, only --lan", name)
+	}
+	a.bind = loopback
+	if *lan {
+		a.bind = anyAddr
+	}
+	if err := os.Setenv(bindEnv, a.bind); err != nil {
+		fmt.Fprintf(a.Stderr, "bothy: %v\n", err)
+		return 1
+	}
+	return 0
+}
+
 func cmdStart(a *App, args []string) int {
-	if len(args) > 0 {
-		return a.usageError("start takes no arguments")
+	if code := a.parseLan("start", args); code != 0 {
+		return code
 	}
 	if code := a.ensureProxy(); code != 0 {
 		return code
@@ -67,8 +103,8 @@ func (a *App) runAll(cmds ...[]string) int {
 }
 
 func cmdRebuild(a *App, args []string) int {
-	if len(args) > 0 {
-		return a.usageError("rebuild takes no arguments")
+	if code := a.parseLan("rebuild", args); code != 0 {
+		return code
 	}
 	if code := a.runAll(compose("down"), compose("build", "--pull")); code != 0 {
 		return code

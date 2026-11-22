@@ -107,9 +107,9 @@ bothy only runs in a folder with a `compose.dev.yml`. It doesn't look in parent 
 
 | Command | What it runs |
 | --- | --- |
-| `bothy start` | starts the proxy if needed, then `up -d --build`, then shows `info` |
+| `bothy start [--lan]` | starts the proxy if needed, then `up -d --build`, then shows `info`; `--lan` opens the app to the network (see [Opening an app to the network](#opening-an-app-to-the-network)) |
 | `bothy stop` | `down` (keeps the database) |
-| `bothy rebuild` | `down`, `build --pull` (fresh base images), `up -d`; keeps the database |
+| `bothy rebuild [--lan]` | `down`, `build --pull` (fresh base images), `up -d`; keeps the database |
 | `bothy destroy` | `down -v`, deleting the app's volumes including the database; asks first |
 | `bothy info` | the app's address and the ports Docker gave its services |
 | `bothy artisan <args>` | `php artisan <args>` in the `appserver` container |
@@ -160,6 +160,16 @@ To use a GUI database client, `bothy info` shows the port and login. The port is
 
 The temp folder clears itself, so copy the backup somewhere else if you want to keep it. On macOS that is `$TMPDIR`, where files are removed after a few days unused. On Linux it is usually `/tmp`, which many systems empty on reboot.
 
+### Opening an app to the network
+
+By default an app's ports are only reachable from your own Mac. To try it from another device, such as your phone over Tailscale, run `bothy start --lan`. That opens the app server and the mail catcher on every interface, and `start` lists what it opened. The next `bothy start` without `--lan` closes them again; so does a `bothy rebuild` without it.
+
+`--lan` works by setting `BOTHY_BIND=0.0.0.0` for compose, and the app's `compose.dev.yml` decides which ports follow it (see [below](#the-composedevyml-bothy-expects)). Without `--lan`, bothy sets `BOTHY_BIND=127.0.0.1`, so a value left in your shell or the app's `.env` can't open anything. Other services, the database included, stay on loopback. If you want one of them on the network, change its line in `compose.dev.yml` yourself.
+
+The `*.bothy.localhost` addresses only work on your own Mac, so from another device use your Mac's address and the port `bothy info` shows for `appserver`.
+
+`bothy info` marks any port published on every interface "(open to the network)", and `start` warns if something is open without `--lan`, which usually means a line in `compose.dev.yml` that leaves out the address.
+
 ### Addresses
 
 The app itself is at `<app>.bothy.localhost`. Other services can have an address of their own too: give them Traefik labels and the `bothy` network as for `appserver`, with router and service names that won't clash with another app's. Converted apps put the mail catcher at `mail-<app>.bothy.localhost`, the same naming as the team's QA servers. `bothy info` lists each address under its service's name, and the app's as `app`.
@@ -174,6 +184,7 @@ bothy hard-codes a few conventions. An app's `compose.dev.yml` needs:
 - the PHP service named `appserver`
 - a MariaDB 10 service named `database`, configured with the `MARIADB_*` environment variables, with its data in a named volume. Without one, MariaDB's image puts it in an anonymous volume, and the next `up` after `bothy stop` starts with an empty database
 - three Traefik labels and the external `bothy` network on `appserver`, to be served by the proxy
+- every published port on an explicit address: `${BOTHY_BIND:-127.0.0.1}` for `appserver` and the mail catcher, so `--lan` can open them, and `127.0.0.1` for everything else. A port with no address is published on every interface
 
 Trimmed to the parts bothy cares about:
 
@@ -183,7 +194,7 @@ name: myapp-dev
 services:
   appserver:
     ports:
-      - "127.0.0.1::6060"            # Docker picks a free port
+      - "${BOTHY_BIND:-127.0.0.1}::6060"   # Docker picks a free port; --lan opens it
     labels:
       - traefik.enable=true
       - traefik.http.routers.myapp.rule=Host(`myapp.bothy.localhost`)
@@ -197,7 +208,7 @@ services:
     volumes:
       - database:/var/lib/mysql      # named, so stop and rebuild keep the data
     ports:
-      - "127.0.0.1:${BOTHY_FORWARD_DB_PORT:-}:3306"
+      - "127.0.0.1:${BOTHY_FORWARD_DB_PORT:-}:3306"   # always loopback
 
 volumes:
   database:

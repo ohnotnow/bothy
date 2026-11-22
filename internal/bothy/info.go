@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -20,6 +21,12 @@ type published struct {
 	Host    string
 	Port    int
 	Target  int
+	Open    bool // published on every interface, not only loopback
+}
+
+// wildcard reports whether docker published a port on every interface.
+func wildcard(host string) bool {
+	return host == "" || host == anyAddr || host == "::"
 }
 
 // routed is a hostname the proxy sends to one of the app's services.
@@ -82,11 +89,12 @@ func parsePublished(out []byte) ([]published, []routed, error) {
 
 	var found []published
 	var hosts []routed
-	seen := map[string]bool{}
+	seenHost := map[string]bool{}
+	seenPort := map[string]int{} // index into found
 	for _, r := range rows {
 		for _, m := range traefikHost.FindAllStringSubmatch(r.Labels, -1) {
-			if !seen["host/"+m[1]] {
-				seen["host/"+m[1]] = true
+			if !seenHost[m[1]] {
+				seenHost[m[1]] = true
 				hosts = append(hosts, routed{r.Service, m[1]})
 			}
 		}
@@ -94,12 +102,15 @@ func parsePublished(out []byte) ([]published, []routed, error) {
 			if p.PublishedPort == 0 {
 				continue // exposed inside Docker only
 			}
+			// The same port on IPv4 and IPv6 is one line, open if either
+			// family is open: 127.0.0.1 on one and :: on the other is open.
 			key := fmt.Sprintf("%s/%d/%d", r.Service, p.TargetPort, p.PublishedPort)
-			if seen[key] {
-				continue // the same port on IPv4 and IPv6
+			if i, ok := seenPort[key]; ok {
+				found[i].Open = found[i].Open || wildcard(p.URL)
+				continue
 			}
-			seen[key] = true
-			found = append(found, published{r.Service, p.URL, p.PublishedPort, p.TargetPort})
+			seenPort[key] = len(found)
+			found = append(found, published{r.Service, p.URL, p.PublishedPort, p.TargetPort, wildcard(p.URL)})
 		}
 	}
 	sort.SliceStable(hosts, func(i, j int) bool {
@@ -111,8 +122,8 @@ func parsePublished(out []byte) ([]published, []routed, error) {
 // address renders a published port the way a person would use it.
 func (p published) address() string {
 	host := p.Host
-	if host == "" || host == "0.0.0.0" || host == "::" {
-		host = "127.0.0.1"
+	if wildcard(host) {
+		host = loopback // still reachable here; info labels it as open
 	}
 	if plainPorts[p.Target] {
 		return fmt.Sprintf("%s:%d", host, p.Port)
@@ -169,8 +180,36 @@ func (a *App) info() int {
 				extra = "  (" + d + ")"
 			}
 		}
+		if p.Open {
+			extra = "  (open to the network)" + extra
+		}
 		fmt.Fprintf(w, "%s\t%s%s\n", p.Service, p.address(), extra)
 	}
 	w.Flush()
+	a.bindNote(ps)
 	return 0
+}
+
+// bindNote follows start's and rebuild's addresses with what the developer
+// needs to know about the network: a warning when something is open without
+// --lan, or what --lan opened and that the next plain start closes it.
+func (a *App) bindNote(ps []published) {
+	if a.bind == "" {
+		return // plain info: the labels are enough
+	}
+	var open []string
+	for _, p := range ps {
+		if p.Open && !slices.Contains(open, p.Service) {
+			open = append(open, p.Service)
+		}
+	}
+	list := strings.Join(open, ", ")
+	switch {
+	case a.bind == loopback && len(open) > 0:
+		fmt.Fprintf(a.Stderr, "\nbothy: warning: open to the network without --lan: %s (%s publishes on every interface, not %s)\n", list, ComposeFile, loopback)
+	case a.bind == anyAddr && len(open) == 0:
+		fmt.Fprintf(a.Stderr, "\nbothy: --lan opened nothing: %s doesn't publish a port on ${%s}.\n", ComposeFile, bindEnv)
+	case a.bind == anyAddr:
+		fmt.Fprintf(a.Stdout, "\nOpen to the network until the next start without --lan: %s.\n", list)
+	}
 }
