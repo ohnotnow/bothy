@@ -93,7 +93,7 @@ func init() {
 		{"composer", "<args>", "run composer in the app container", true, cmdComposer},
 		{"test", "[args]", "run the tests", true, cmdTest},
 		{"testf", "<filter> [args]", "run the tests matching a filter", true, cmdTestf},
-		{"mfs", "[args]", "migrate:fresh, seeding with TestDataSeeder (or --seeder=X)", true, cmdMfs},
+		{"mfs", "[args]", "wipe the database: migrate:fresh, seeding with TestDataSeeder (or --seeder=X)", true, cmdMfs},
 		{"horizon", "", "run horizon in the foreground (ctrl-c to stop)", true, cmdHorizon},
 		{"watch", "[--every N]", "npm run build on this machine, again whenever resources/ changes", true, cmdWatch},
 		{"shell", "", "open a shell in the app container", true, cmdShell},

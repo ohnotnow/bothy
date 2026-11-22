@@ -53,8 +53,8 @@ func TestPoweroffStopsEachBothyProject(t *testing.T) {
 		t.Fatalf("exit %d, want 1 because the first stop failed", code)
 	}
 	want := [][]string{
-		{"compose", "-f", "/home/dev/code/alpha/compose.dev.yml", "down"},
-		{"compose", "-f", "/home/dev/code/beta/compose.dev.yml", "down"},
+		{"compose", "-p", "alpha-dev", "-f", "/home/dev/code/alpha/compose.dev.yml", "down"},
+		{"compose", "-p", "beta-dev", "-f", "/home/dev/code/beta/compose.dev.yml", "down"},
 	}
 	if !reflect.DeepEqual(*calls, want) {
 		t.Fatalf("got %q, want %q", *calls, want)

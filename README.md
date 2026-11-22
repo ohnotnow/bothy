@@ -80,6 +80,35 @@ bothy install-skills
 
 That copies it into `~/.claude/skills/bothy/`. It never deletes anything, and asks before replacing a copy you've changed (`d` at the prompt shows the difference). `--dry-run` shows what it would do, `--force` replaces without asking, and `--dir` installs under another folder, e.g. `--dir ~/.config/opencode` for another agent. `bothy version` says whether your installed copy is up to date.
 
+### Keep agents off the commands that stop stacks or wipe data
+
+The skill tells an agent never to start or stop stacks, run `bothy watch`, or wipe the database. Agents don't always listen, so also deny those commands in `~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "deny": [
+      "Bash(bothy start *)",
+      "Bash(bothy stop *)",
+      "Bash(bothy rebuild *)",
+      "Bash(bothy destroy *)",
+      "Bash(bothy poweroff *)",
+      "Bash(bothy watch *)",
+      "Bash(bothy db-import *)",
+      "Bash(bothy mfs *)",
+      "Bash(bothy artisan migrate:fresh *)",
+      "Bash(bothy artisan migrate:refresh *)",
+      "Bash(bothy artisan migrate:reset *)",
+      "Bash(bothy artisan db:wipe *)"
+    ]
+  }
+}
+```
+
+Merge the `deny` list into any you already have. Each rule also matches the bare command (`bothy mfs` with no arguments) and catches it inside a chain such as `cd app && bothy mfs`. A deny at user level wins over an allow in a project's own `.claude/settings.json`, so an app can't loosen it. The artisan lines are there because an agent refused `bothy mfs` will often try `bothy artisan migrate:fresh` next.
+
+These rules match the text of the command, so they stop the casual attempt, not a determined one: `bothy shell`, `bothy tinker` and `sh -c '...'` can still run anything. See Claude Code's [permissions documentation](https://code.claude.com/docs/en/permissions).
+
 ### Start an app
 
 ```bash
@@ -117,7 +146,7 @@ bothy only runs in a folder with a `compose.dev.yml`. It doesn't look in parent 
 | `bothy composer <args>` | `composer <args>` in `appserver` |
 | `bothy test [args]` | `php artisan test [args]` |
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
-| `bothy mfs [args]` | `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
+| `bothy mfs [args]` | wipes the database: `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
 | `bothy horizon` | Horizon in the foreground (ctrl-c to stop) |
 | `bothy watch [--every N]` | `npm run build` on this machine (not in a container), then again whenever a file under `resources/` changes; checks every second, or every N seconds (e.g. `0.5`); ctrl-c to stop |
 | `bothy shell` (or `ssh`) | a bash shell in `appserver` |

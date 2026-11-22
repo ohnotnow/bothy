@@ -84,7 +84,8 @@ func cmdPoweroff(a *App, args []string) int {
 	failed := 0
 	for _, p := range ps {
 		fmt.Fprintf(a.Stdout, "Stopping %s (%s)\n", p.Name, filepath.Dir(p.File))
-		if a.Run([]string{"compose", "-f", p.File, "down"}) != 0 {
+		// -p: the project docker listed, even if COMPOSE_PROJECT_NAME is set
+		if a.Run([]string{"compose", "-p", p.Name, "-f", p.File, "down"}) != 0 {
 			fmt.Fprintf(a.Stderr, "bothy: could not stop %s\n", p.Name)
 			failed++
 		}

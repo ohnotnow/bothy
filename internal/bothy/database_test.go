@@ -302,6 +302,19 @@ func TestHumanBytes(t *testing.T) {
 	}
 }
 
+// assertPrivate fails unless only the owner can read path, under the usual
+// umask of 022 that leaves a 0644 file readable by everyone.
+func assertPrivate(t *testing.T, path string) {
+	t.Helper()
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm()&0o077 != 0 {
+		t.Fatalf("%s is readable by others: %v", filepath.Base(path), info.Mode())
+	}
+}
+
 func TestDbExport(t *testing.T) {
 	const dump = "-- MariaDB dump\nCREATE TABLE users;\n"
 
@@ -319,6 +332,7 @@ func TestDbExport(t *testing.T) {
 		if string(got) != dump {
 			t.Fatalf("file holds %q", got)
 		}
+		assertPrivate(t, filepath.Join(a.Dir, "out.sql"))
 	})
 
 	t.Run("default name is gzipped and named after the folder", func(t *testing.T) {
@@ -331,6 +345,7 @@ func TestDbExport(t *testing.T) {
 		if len(matches) != 1 {
 			t.Fatalf("found %q", matches)
 		}
+		assertPrivate(t, matches[0])
 		f, _ := os.Open(matches[0])
 		defer f.Close()
 		zr, err := gzip.NewReader(f)

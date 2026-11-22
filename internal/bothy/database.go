@@ -182,7 +182,7 @@ func (a *App) backupBeforeWipe(backup string) int {
 	fmt.Fprintf(a.Stdout, "Backing up the current database to %s\n", backup)
 	// 0o600: on Linux the temp folder is shared with other users, and the
 	// database may hold a copy of real data.
-	return a.dumpTo(backup, backup, 0o600)
+	return a.dumpTo(backup, backup)
 }
 
 // humanBytes renders a size the way a person would say it, e.g. 1.5 GB.
@@ -217,7 +217,7 @@ func cmdDbExport(a *App, args []string) int {
 		return 0
 	}
 
-	if code := a.dumpTo(a.path(name), name, 0o644); code != 0 {
+	if code := a.dumpTo(a.path(name), name); code != 0 {
 		return code
 	}
 	fmt.Fprintf(a.Stdout, "Exported the database to %s\n", name)
@@ -226,9 +226,10 @@ func cmdDbExport(a *App, args []string) int {
 
 // dumpTo dumps the database to a new file at target, gzipped when its name
 // ends in .gz. It never overwrites a file, and removes its own if the dump
-// fails. name is how messages refer to the file.
-func (a *App) dumpTo(target, name string, perm os.FileMode) int {
-	f, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm)
+// fails. name is how messages refer to the file. Only the developer can read
+// it: a dump can hold real data.
+func (a *App) dumpTo(target, name string) int {
+	f, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if errors.Is(err, fs.ErrExist) {
 		fmt.Fprintf(a.Stderr, "bothy: %s already exists, not overwriting it\n", name)
 		return 1

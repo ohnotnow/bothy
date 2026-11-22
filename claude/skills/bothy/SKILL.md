@@ -15,8 +15,14 @@ running it.
 - **Never run `bothy start`, `bothy stop`, `bothy rebuild`, `bothy destroy` or
   `bothy poweroff`.** Starting and stopping stacks is the developer's job. If the stack is not running, say so
   and ask them to start it.
-- **Never run `bothy db-import`.** It wipes the app's database before loading
-  the dump.
+- **Never wipe or reset the app's database, by any route.** That means
+  `bothy mfs`, `bothy db-import`, and artisan's own `migrate:fresh`,
+  `migrate:refresh`, `migrate:reset` and `db:wipe` (through `bothy artisan`
+  or any other way in). The developer may be partway through testing or
+  demoing a feature with data they set up by hand, or have loaded a real
+  dump, and none of these keep a copy. If you think the database needs a
+  fresh start, say so and let the developer run it. Plain `bothy artisan
+  migrate` (forward migrations only) is fine.
 - **Never run `bothy watch`.** It runs `npm run build` on the developer's Mac,
   outside any container, and the app's `package.json` decides what that
   runs. It also runs until stopped.
@@ -42,7 +48,6 @@ running it.
 | `bothy composer <args>` | `composer <args>` in `appserver` |
 | `bothy test [args]` | `php artisan test [args]` |
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
-| `bothy mfs [args]` | `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
 | `bothy db-export [file]` | dumps the database to a file (default `<folder>-<date>-<time>.sql.gz`; never overwrites) |
 | `bothy info` | the app's addresses and ports, which Docker picks at random (read-only) |
 | `bothy ls` | lists running bothy projects (read-only) |
@@ -87,6 +92,10 @@ Work through these when helping someone start on a bothy app:
       `bothy start --lan`, and the next plain `bothy start` closes them
       again. If `bothy info` marks a port "(open to the network)" and the
       developer didn't ask for that, tell them which service and which line.
+- [ ] **Deny rules for the commands agents must not run.** bothy's README
+      ("Keep agents off the commands that stop stacks or wipe data") has a
+      `permissions.deny` list for `~/.claude/settings.json`. Offer it to the
+      developer and let them add it themselves; don't edit their settings.
 - [ ] **Asset watching.** The team does not use the vite dev server. Instead
       the developer runs `bothy watch`, which runs `npm run build` once, then
       again whenever a file under `resources/` changes (`--every 5` checks
