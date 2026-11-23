@@ -107,6 +107,14 @@ The skill tells an agent never to start or stop stacks, run `bothy watch`, or wi
 
 Merge the `deny` list into any you already have. Each rule also matches the bare command (`bothy mfs` with no arguments) and catches it inside a chain such as `cd app && bothy mfs`. A deny at user level wins over an allow in a project's own `.claude/settings.json`, so an app can't loosen it. The artisan lines are there because an agent refused `bothy mfs` will often try `bothy artisan migrate:fresh` next.
 
+Agents may run `bothy assets`, which runs the app's `npm run build` on your Mac. If you want to stop an agent changing what that build runs, also add this to the `deny` list:
+
+```json
+      "Edit(**/package.json)"
+```
+
+It covers Claude's Write tool too, and a plain `sed` on the file, but it applies in every project: an agent can't edit any `package.json` while it's there.
+
 These rules match the text of the command, so they stop the casual attempt, not a determined one: `bothy shell`, `bothy tinker` and `sh -c '...'` can still run anything. See Claude Code's [permissions documentation](https://code.claude.com/docs/en/permissions).
 
 ### Start an app
@@ -148,6 +156,7 @@ bothy only runs in a folder with a `compose.dev.yml`. It doesn't look in parent 
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
 | `bothy mfs [args]` | wipes the database: `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
 | `bothy horizon` | Horizon in the foreground (ctrl-c to stop) |
+| `bothy assets` | `npm run build` on this machine (not in a container), once; exits with npm's exit code |
 | `bothy watch [--every N]` | `npm run build` on this machine (not in a container), then again whenever a file under `resources/` changes; checks every second, or every N seconds (e.g. `0.5`); ctrl-c to stop |
 | `bothy shell` (or `ssh`) | a bash shell in `appserver` |
 | `bothy mysql` (or `database`) | a MariaDB client on the app's database, as root |
@@ -197,7 +206,7 @@ By default an app's ports are only reachable from your own Mac. To try it from a
 
 The `*.bothy.localhost` addresses only work on your own Mac, so from another device use your Mac's address and the port `bothy info` shows for `appserver`.
 
-`bothy info` marks any port published on every interface "(open to the network)", and `start` warns if something is open without `--lan`, which usually means a line in `compose.dev.yml` that leaves out the address.
+`bothy info` marks any port published on every interface "(open to the network)" and shows it on your Mac's address on the local network, the one another device on the same Wi-Fi would use. It picks the first private address on an interface that is up, passing over VPN tunnels (Tailscale's too) and virtual machine bridges, and shows `127.0.0.1` if it finds none. `start` warns if something is open without `--lan`, which usually means a line in `compose.dev.yml` that leaves out the address.
 
 ### Addresses
 

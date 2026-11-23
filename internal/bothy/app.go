@@ -50,8 +50,11 @@ type App struct {
 	// Mkcert runs mkcert; nil when it isn't installed.
 	Mkcert func(args ...string) error
 	// Npm runs npm on this machine (not in a container) and returns its
-	// exit code; nil when it isn't installed. Used by watch.
+	// exit code; nil when it isn't installed. Used by assets and watch.
 	Npm func(args ...string) int
+	// LanAddress returns this machine's address on the local network, which
+	// info shows for ports open to the network; nil or "" means 127.0.0.1.
+	LanAddress func() string
 	// Now is the clock; nil means time.Now.
 	Now func() time.Time
 	// ReleaseURL is the GitHub API address of the latest release; empty
@@ -95,6 +98,7 @@ func init() {
 		{"testf", "<filter> [args]", "run the tests matching a filter", true, cmdTestf},
 		{"mfs", "[args]", "wipe the database: migrate:fresh, seeding with TestDataSeeder (or --seeder=X)", true, cmdMfs},
 		{"horizon", "", "run horizon in the foreground (ctrl-c to stop)", true, cmdHorizon},
+		{"assets", "", "npm run build on this machine, once", true, cmdAssets},
 		{"watch", "[--every N]", "npm run build on this machine, again whenever resources/ changes", true, cmdWatch},
 		{"shell", "", "open a shell in the app container", true, cmdShell},
 		{"ssh", "", "same as shell", true, cmdShell},
@@ -138,6 +142,7 @@ func Main(args []string, skills fs.FS) int {
 		BackupDir:   os.TempDir(),
 		Mkcert:      findMkcert(),
 		Npm:         findNpm(dir),
+		LanAddress:  findLanAddress,
 		ReleaseURL:  LatestReleaseAPI,
 		Exe:         executable(),
 		TryBinary:   tryBinary,

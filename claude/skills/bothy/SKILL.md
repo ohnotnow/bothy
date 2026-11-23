@@ -6,7 +6,8 @@ description: Working in a Laravel app that runs under bothy (a compose.dev.yml i
 # bothy
 
 bothy is a small wrapper over `docker compose -f compose.dev.yml`. Each
-command is one compose call, apart from `watch`, which runs npm on the Mac;
+command is one compose call, apart from `assets` and `watch`, which run npm
+on the Mac;
 `bothy --dry-run <command>` prints the exact docker command instead of
 running it.
 
@@ -23,9 +24,13 @@ running it.
   dump, and none of these keep a copy. If you think the database needs a
   fresh start, say so and let the developer run it. Plain `bothy artisan
   migrate` (forward migrations only) is fine.
-- **Never run `bothy watch`.** It runs `npm run build` on the developer's Mac,
-  outside any container, and the app's `package.json` decides what that
-  runs. It also runs until stopped.
+- **To build the front-end assets, run `bothy assets`.** It runs `npm run
+  build` once on the developer's Mac, outside any container, and exits with
+  npm's exit code, so you can see whether the build worked. The app's
+  `package.json` decides what that build runs: don't change its `build`
+  script, or anything it calls, without the developer's say-so.
+- **Never run `bothy watch`.** It is the same build, repeated whenever
+  `resources/` changes, and it runs until stopped. Use `bothy assets`.
 - **Before installing or updating packages** (npm, composer, uv or any
   other), look for the developer's own guidance on package-manager versions
   and supply-chain settings, such as their global `CLAUDE.md`. This skill
@@ -99,7 +104,8 @@ Work through these when helping someone start on a bothy app:
 - [ ] **Asset watching.** The team does not use the vite dev server. Instead
       the developer runs `bothy watch`, which runs `npm run build` once, then
       again whenever a file under `resources/` changes (`--every 5` checks
-      every five seconds instead of every second). It runs npm on the Mac,
+      every five seconds instead of every second), or `bothy assets` for a
+      single build. Both run npm on the Mac,
       not in a container, because the Mac's `node_modules` holds Mac-only
       native binaries. Check the developer has `node` and `npm`, and see the
       package-manager rule above.

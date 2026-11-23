@@ -119,11 +119,12 @@ func parsePublished(out []byte) ([]published, []routed, error) {
 	return found, hosts, nil
 }
 
-// address renders a published port the way a person would use it.
-func (p published) address() string {
+// address renders a published port the way a person would use it. lan is
+// the host to show for a port open to the network.
+func (p published) address(lan string) string {
 	host := p.Host
 	if wildcard(host) {
-		host = loopback // still reachable here; info labels it as open
+		host = lan
 	}
 	if plainPorts[p.Target] {
 		return fmt.Sprintf("%s:%d", host, p.Port)
@@ -169,6 +170,7 @@ func (a *App) info() int {
 		fmt.Fprintf(a.Stdout, "%s has nothing running with a port (bothy start starts it).\n", filepath.Base(a.Dir))
 		return 0
 	}
+	lan := a.lanHost(ps)
 	w := tabwriter.NewWriter(a.Stdout, 0, 0, 2, ' ', 0)
 	for _, h := range hosts {
 		fmt.Fprintf(w, "%s\thttps://%s\n", h.label(), h.Host)
@@ -183,11 +185,25 @@ func (a *App) info() int {
 		if p.Open {
 			extra = "  (open to the network)" + extra
 		}
-		fmt.Fprintf(w, "%s\t%s%s\n", p.Service, p.address(), extra)
+		fmt.Fprintf(w, "%s\t%s%s\n", p.Service, p.address(lan), extra)
 	}
 	w.Flush()
 	a.bindNote(ps)
 	return 0
+}
+
+// lanHost is the host info shows for ports open to the network: this
+// machine's local network address, so it can be typed into a phone, or
+// 127.0.0.1 when there isn't one (offline, say). Only looked up when a port
+// is open.
+func (a *App) lanHost(ps []published) string {
+	if a.LanAddress == nil || !slices.ContainsFunc(ps, func(p published) bool { return p.Open }) {
+		return loopback
+	}
+	if addr := a.LanAddress(); addr != "" {
+		return addr
+	}
+	return loopback
 }
 
 // bindNote follows start's and rebuild's addresses with what the developer

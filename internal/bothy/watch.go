@@ -53,8 +53,7 @@ func cmdWatch(a *App, args []string) int {
 		fmt.Fprintf(a.Stderr, "bothy: no %s folder in %s\n", watchDir, a.Dir)
 		return exitNotFound
 	}
-	if a.Npm == nil {
-		fmt.Fprintln(a.Stderr, "bothy: watch runs npm on this machine, and npm isn't on your PATH")
+	if !a.haveNpm("watch") {
 		return 1
 	}
 
@@ -72,6 +71,32 @@ func cmdWatch(a *App, args []string) int {
 		}
 	}
 	return a.watchLoop(root, wait)
+}
+
+// cmdAssets runs `npm run build` on the host once and exits with npm's exit
+// code: the one-off build that bothy watch starts with, so a developer or an
+// agent can build without leaving a watcher running.
+func cmdAssets(a *App, args []string) int {
+	if len(args) > 0 {
+		return a.usageError("assets takes no arguments")
+	}
+	if a.dryRun {
+		fmt.Fprintln(a.Stdout, "npm run build")
+		return 0
+	}
+	if !a.haveNpm("assets") {
+		return 1
+	}
+	return a.Npm("run", "build")
+}
+
+// haveNpm says whether npm is installed, and tells the developer if not.
+func (a *App) haveNpm(cmd string) bool {
+	if a.Npm == nil {
+		fmt.Fprintf(a.Stderr, "bothy: %s runs npm on this machine, and npm isn't on your PATH\n", cmd)
+		return false
+	}
+	return true
 }
 
 // watchLoop builds once, then calls wait between checks of root and builds

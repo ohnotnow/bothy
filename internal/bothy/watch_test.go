@@ -154,3 +154,52 @@ func TestWatchLoop(t *testing.T) {
 		}
 	}
 }
+
+func TestAssets(t *testing.T) {
+	t.Run("builds once and passes npm's exit code back", func(t *testing.T) {
+		for _, code := range []int{0, 2} {
+			a, calls := watchApp(t, code)
+			if got := a.Main(words("assets")); got != code {
+				t.Errorf("exit %d, want %d", got, code)
+			}
+			if want := [][]string{{"run", "build"}}; !reflect.DeepEqual(*calls, want) {
+				t.Errorf("npm calls = %v, want %v", *calls, want)
+			}
+		}
+	})
+	t.Run("takes no arguments", func(t *testing.T) {
+		a, calls := watchApp(t)
+		if code := a.Main(words("assets --watch")); code != exitUsage {
+			t.Errorf("exit %d, want %d", code, exitUsage)
+		}
+		if len(*calls) != 0 {
+			t.Errorf("npm ran: %v", *calls)
+		}
+	})
+	t.Run("no npm", func(t *testing.T) {
+		a, _ := watchApp(t)
+		a.Npm = nil
+		var stderr strings.Builder
+		a.Stderr = &stderr
+		if code := a.Main(words("assets")); code != 1 {
+			t.Errorf("exit %d, want 1", code)
+		}
+		if !strings.Contains(stderr.String(), "assets runs npm on this machine, and npm isn't on your PATH") {
+			t.Errorf("stderr = %q", stderr.String())
+		}
+	})
+	t.Run("dry run", func(t *testing.T) {
+		a, calls := watchApp(t)
+		var stdout strings.Builder
+		a.Stdout = &stdout
+		if code := a.Main(words("--dry-run assets")); code != 0 {
+			t.Fatalf("exit %d", code)
+		}
+		if len(*calls) != 0 {
+			t.Errorf("npm ran: %v", *calls)
+		}
+		if stdout.String() != "npm run build\n" {
+			t.Errorf("stdout = %q", stdout.String())
+		}
+	})
+}
