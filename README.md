@@ -154,6 +154,7 @@ bothy only runs in a folder with a `compose.dev.yml`. It doesn't look in parent 
 | `bothy composer <args>` | `composer <args>` in `appserver` |
 | `bothy test [args]` | `php artisan test [args]` |
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
+| `bothy ci` | the team's usual CI checks, before you push (see [Checking before you push](#checking-before-you-push)) |
 | `bothy mfs [args]` | wipes the database: `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
 | `bothy horizon` | Horizon in the foreground (ctrl-c to stop) |
 | `bothy assets` | `npm run build` on this machine (not in a container), once; exits with npm's exit code |
@@ -189,6 +190,22 @@ After the swap it runs the new binary once. If that fails, which is what happens
 A binary built from source isn't replaced: update it with `git pull` and `make install`.
 
 A new release may carry a changed skill too. After updating, `bothy install-skills --dry-run` shows whether it has.
+
+### Checking before you push
+
+`bothy ci` runs, on your Mac, the checks the team's GitLab pipelines run in their test stage, so a forgotten `composer update` shows up in seconds, not after a push and a long wait. With the stack up, it checks:
+
+1. **env keys:** `.env` and `.env.example` have the same keys, both ways. bothy's own `BOTHY_*` keys are left out. It prints key names only, never values.
+2. **stray dd/dump:** no `dd(` or `dump(` under `app/`, the same search as CI's, except that this one really fails.
+3. **composer audit**
+4. **pint:** `pint --test`, skipped if the app doesn't have Pint.
+5. **tests:** `php artisan test` against MariaDB, in parallel when paratest is installed.
+
+Every check runs, then a summary lists each one; it exits 1 if any failed.
+
+The tests run in a database of bothy's own, `bothy_ci`, which `bothy ci` creates in the app's MariaDB along with a `bothy_ci` user that can only reach that database and the copies parallel testing makes. Your own database and its data aren't touched: a test pointed at it by mistake gets "access denied". Tests that pass under `bothy test` (in-memory SQLite) can fail here; that is usually a real difference between the two databases, such as a query on a column that doesn't exist, which SQLite lets through.
+
+It is nearly as good as CI, not CI: it skips CI's checks against the QA and production settings held in GitLab, and doesn't build the image.
 
 ### The database
 

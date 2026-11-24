@@ -56,6 +56,7 @@ running it.
 | `bothy composer <args>` | `composer <args>` in `appserver` |
 | `bothy test [args]` | `php artisan test [args]` |
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
+| `bothy ci` | the team's usual CI checks (below) |
 | `bothy db-export [file]` | dumps the database to a file (default `<folder>-<date>-<time>.sql.gz`; never overwrites) |
 | `bothy info` | the app's addresses and ports, which Docker picks at random (read-only) |
 | `bothy ls` | lists running bothy projects (read-only) |
@@ -63,6 +64,18 @@ running it.
 
 `tinker`, `shell` (alias `ssh`), `mysql` (alias `database`) and `horizon` are
 interactive or run until stopped, so they are for the developer, not for you.
+
+`bothy ci` runs what the team's GitLab pipelines check, in under a minute:
+`.env` and `.env.example` have the same keys, no stray `dd(` or `dump(` in
+`app/`, `composer audit`, `pint --test`, and the tests against MariaDB in a
+database of bothy's own (`bothy_ci`), so the developer's data is never
+touched. Run it when you think a piece of work is finished, and before
+suggesting the developer pushes. Every check runs and a summary comes last;
+it exits 1 if any failed. A test that fails here but passes under
+`bothy test` (in-memory SQLite) is usually a real difference between the
+two databases, and worth telling the developer about, not working round.
+The env check prints key names only; never go and read `.env` to look at
+the values.
 
 The database commands take the credentials from the database container's own
 environment (`MARIADB_ROOT_PASSWORD`, `MARIADB_DATABASE`), so there is no

@@ -96,6 +96,7 @@ func init() {
 		{"composer", "<args>", "run composer in the app container", true, cmdComposer},
 		{"test", "[args]", "run the tests", true, cmdTest},
 		{"testf", "<filter> [args]", "run the tests matching a filter", true, cmdTestf},
+		{"ci", "", "run the team's usual CI checks: env keys, stray dd/dump, composer audit, pint, tests on MariaDB", true, cmdCi},
 		{"mfs", "[args]", "wipe the database: migrate:fresh, seeding with TestDataSeeder (or --seeder=X)", true, cmdMfs},
 		{"horizon", "", "run horizon in the foreground (ctrl-c to stop)", true, cmdHorizon},
 		{"assets", "", "npm run build on this machine, once", true, cmdAssets},

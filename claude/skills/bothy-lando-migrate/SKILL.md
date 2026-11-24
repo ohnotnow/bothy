@@ -12,9 +12,9 @@ the `bothy` skill: read that too.
 
 **It leaves alone everything QA, CI and production use:** the app's own
 `Dockerfile`, its CI file and its deploy or stack files. Moving those is a
-separate step, done when the app moves servers. The one exception is an
-offer, in step 3, to update the node version the app's `Dockerfile` builds
-its assets with.
+separate step, done when the app moves servers. There are two exceptions,
+both offers in step 3: updating the node version the app's `Dockerfile`
+builds its assets with, and fixing a broken check in its CI file.
 
 Work through the steps in order, and talk to the developer as you go. Stop and
 ask wherever a step says so; for a question with a few clear answers, use
@@ -138,6 +138,27 @@ The files:
   `ERR_OSSL_EVP_UNSUPPORTED`, on the Mac as well as in CI, and that Mix 6 is
   the fix; otherwise don't mention Mix or OpenSSL. Change nothing else in
   the Dockerfile.
+- `.gitlab-ci.yml`'s check for stray `dd(` and `dump(` calls. Many of the
+  team's apps have it written as `egrep -r '[^a-zA-Z](dd\(|dump\()' app || exit 0`,
+  and that line **can never fail**: when grep finds a stray call it exits 0,
+  and when it finds none the `|| exit 0` does. A forgotten `dd()` goes to QA
+  and production with a green pipeline. If the line is in the middle of a
+  job (some apps put it inside `unit-tests`), the `|| exit 0` also ends that
+  job early whenever the code is clean, so the lines after it never run.
+  This is a real bug, not a style point: don't leave it as a passing remark.
+  Explain it to the developer in those plain terms, show them the line, and
+  offer to replace it with:
+
+  ```yaml
+  - if grep -rnE '[^a-zA-Z](dd|dump)\(' app; then echo "Stray dd() or dump() found"; exit 1; fi
+  ```
+
+  Not `! grep ...`: bash's `set -e` ignores a failed command that starts with
+  `!`, so it only fails the job as the job's last line. If the line was
+  mid-job, the lines after it now run, for the first time in a while: say
+  so, since they may fail. If the developer agrees, change that line and
+  nothing else in the CI file. If they say no, tell them once more that the
+  check is not checking anything, then leave it.
 - `.env.example`: set `APP_URL=https://<app>.bothy.localhost`, so that
   `cp .env.example .env` then `bothy start` works for someone cloning the app
   for the first time, as it did with lando. Check the redis and mail host
@@ -294,8 +315,9 @@ bothy's commands here, and don't list anything bothy lacks.
   before committing.
 - `.lando.yml` is still there, for them to keep or bin, and the changed
   files are ready for them to review and commit. Nothing about CI or
-  deployment has changed, unless they accepted the node bump, which changes
-  the Dockerfile's node line and nothing else.
+  deployment has changed, unless they accepted the node bump (the
+  Dockerfile's node line and nothing else) or the `dd` check fix (that one
+  line in `.gitlab-ci.yml`).
 
 Then offer a short tour of bothy: "Would you like a quick tour of bothy's
 day-to-day commands?" Welcome on a first migration; after a couple, a
@@ -303,6 +325,7 @@ developer will say no. On a yes, keep it brief, from the `bothy` skill:
 starting and stopping, `info` (the ports change between starts; setting
 `BOTHY_FORWARD_DB_PORT` in `.env` pins the database's, for a GUI client),
 `artisan`/`tinker`/`test` (`bothy test --parallel` for a faster run),
+`ci` (the team's usual CI checks in under a minute, before a push),
 `shell` (or `ssh`) for a shell in the app's container, `mfs`, `assets` and
 `watch` (npm runs on the Mac, which is why lando's node service has gone),
 `db-export`/`db-import`, and the `permissions.deny` list in bothy's README
