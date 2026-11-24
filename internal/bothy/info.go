@@ -148,6 +148,23 @@ func (a *App) dbDetails() string {
 	return fmt.Sprintf("database %s, user %s, password %s", f[0], f[1], f[2])
 }
 
+// s3Login asks a service for the login of an S3 server (RustFS) running in
+// it, for its web console. Asking the container's own environment finds it
+// whatever the app calls the service. A local development password, like the
+// database's. Returns "" for a service that isn't one, or has no shell.
+func (a *App) s3Login(service string) string {
+	script := `printf '%s\n%s\n' "$RUSTFS_ACCESS_KEY" "$RUSTFS_SECRET_KEY"`
+	out, err := a.Output(compose("exec", "-T", service, "sh", "-c", script))
+	if err != nil {
+		return ""
+	}
+	f := strings.Split(strings.TrimSuffix(string(out), "\n"), "\n")
+	if len(f) != 2 || f[0] == "" || f[1] == "" {
+		return ""
+	}
+	return fmt.Sprintf("user %s, password %s", f[0], f[1])
+}
+
 func cmdInfo(a *App, args []string) int {
 	if len(args) > 0 {
 		return a.usageError("info takes no arguments")
@@ -173,7 +190,13 @@ func (a *App) info() int {
 	lan := a.lanHost(ps)
 	w := tabwriter.NewWriter(a.Stdout, 0, 0, 2, ' ', 0)
 	for _, h := range hosts {
-		fmt.Fprintf(w, "%s\thttps://%s\n", h.label(), h.Host)
+		extra := ""
+		if h.Service != appService {
+			if l := a.s3Login(h.Service); l != "" {
+				extra = "  (" + l + ")"
+			}
+		}
+		fmt.Fprintf(w, "%s\thttps://%s%s\n", h.label(), h.Host, extra)
 	}
 	for _, p := range ps {
 		extra := ""

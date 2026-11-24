@@ -61,10 +61,49 @@ func infoApp(t *testing.T, db string) (*App, *[][]string, *bytes.Buffer) {
 			return []byte(proxyUp), nil
 		case strings.Contains(joined, " ps "):
 			return []byte(psOutput), nil
+		case strings.Contains(joined, "RUSTFS_ACCESS_KEY"):
+			return []byte("\n\n"), nil // not an S3 server: empty variables
 		}
 		return []byte(db), nil
 	}
 	return a, calls, stdout
+}
+
+// minioRow is a RustFS service with its console routed through the proxy.
+const minioRow = `{"Service":"minio","State":"running","Labels":"com.docker.compose.project=alpha-dev,traefik.enable=true,traefik.http.routers.minio-alpha.rule=Host(` + "`minio-alpha.bothy.localhost`" + `),traefik.http.services.minio-alpha.loadbalancer.server.port=9001","Publishers":[{"URL":"127.0.0.1","TargetPort":9001,"PublishedPort":54130,"Protocol":"tcp"}]}
+`
+
+func TestInfoShowsTheS3ConsoleLogin(t *testing.T) {
+	a, _, out := infoApp(t, "laravel\nlaravel\nsecret\n")
+	var asked [][]string
+	a.Output = func(args []string) ([]byte, error) {
+		asked = append(asked, args)
+		joined := strings.Join(args, " ")
+		switch {
+		case strings.Contains(joined, " ps "):
+			return []byte(psOutput + minioRow), nil
+		case strings.Contains(joined, "RUSTFS_ACCESS_KEY") && slices.Contains(args, "minio"):
+			return []byte("minioadmin\nminiosecret\n"), nil
+		case strings.Contains(joined, "RUSTFS_ACCESS_KEY"):
+			return []byte("\n\n"), nil
+		}
+		return []byte("laravel\nlaravel\nsecret\n"), nil
+	}
+	if code := a.Main([]string{"info"}); code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	got := out.String()
+	if !strings.Contains(got, "minio        https://minio-alpha.bothy.localhost  (user minioadmin, password miniosecret)\n") {
+		t.Errorf("no console login in:\n%s", got)
+	}
+	if !strings.Contains(got, "sendmailhog  https://mail-alpha.bothy.localhost\n") {
+		t.Errorf("the mail catcher should have no login:\n%s", got)
+	}
+	for _, c := range asked {
+		if strings.Contains(strings.Join(c, " "), "RUSTFS_ACCESS_KEY") && slices.Contains(c, appService) {
+			t.Errorf("asked the app server for an S3 login: %v", c)
+		}
+	}
 }
 
 func TestInfo(t *testing.T) {
