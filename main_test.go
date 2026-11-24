@@ -19,7 +19,15 @@ func TestBuiltInSkills(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"claude/skills/bothy/SKILL.md"}
+	want := []string{
+		"claude/skills/bothy/SKILL.md",
+		"claude/skills/bothy-lando-migrate/SKILL.md",
+		"claude/skills/bothy-lando-migrate/reference/compose.dev.yml",
+		"claude/skills/bothy-lando-migrate/reference/docker/custom_php.ini",
+		"claude/skills/bothy-lando-migrate/reference/docker/dev.Dockerfile",
+		"claude/skills/bothy-lando-migrate/reference/docker/ldap.conf",
+		"claude/skills/bothy-lando-migrate/reference/docker/recheck_files.ini",
+	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("built in %v, want %v", got, want)
 	}

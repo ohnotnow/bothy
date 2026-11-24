@@ -82,7 +82,7 @@ That copies it into `~/.claude/skills/bothy/`. It never deletes anything, and as
 
 ### Keep agents off the commands that stop stacks or wipe data
 
-The skill tells an agent never to start or stop stacks, run `bothy watch`, or wipe the database. Agents don't always listen, so also deny those commands in `~/.claude/settings.json`:
+The skill tells an agent to start or stop stacks only when you ask, not to wipe the database without checking, and never to run `bothy watch`. If you'd rather an agent never ran them at all, deny those commands in `~/.claude/settings.json`:
 
 ```json
 {
@@ -210,7 +210,7 @@ The `*.bothy.localhost` addresses only work on your own Mac, so from another dev
 
 ### Addresses
 
-The app itself is at `<app>.bothy.localhost`. Other services can have an address of their own too: give them Traefik labels and the `bothy` network as for `appserver`, with router and service names that won't clash with another app's. Converted apps put the mail catcher at `mail-<app>.bothy.localhost`, the same naming as the team's QA servers. `bothy info` lists each address under its service's name, and the app's as `app`.
+The app itself is at `<app>.bothy.localhost`. Other services can have an address of their own too: give them Traefik labels and the `bothy` network as for `appserver`, with router and service names that won't clash with another app's. Converted apps put the mail catcher at `mail-<app>.bothy.localhost`, the same naming as the team's QA servers. `bothy info` lists each address under its service's name, and the app's as `app`. For an S3 server (RustFS) it also shows the console's login, read from the container's `RUSTFS_ACCESS_KEY` and `RUSTFS_SECRET_KEY`.
 
 The certificate is a wildcard, and wildcards only cover one level, so the extra part goes in front with a dash (`mail-myapp`), never as a dot: `mail.myapp.bothy.localhost` fails with a certificate error.
 

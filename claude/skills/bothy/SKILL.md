@@ -13,17 +13,20 @@ running it.
 
 ## The rules for agents
 
-- **Never run `bothy start`, `bothy stop`, `bothy rebuild`, `bothy destroy` or
-  `bothy poweroff`.** Starting and stopping stacks is the developer's job. If the stack is not running, say so
-  and ask them to start it.
-- **Never wipe or reset the app's database, by any route.** That means
-  `bothy mfs`, `bothy db-import`, and artisan's own `migrate:fresh`,
-  `migrate:refresh`, `migrate:reset` and `db:wipe` (through `bothy artisan`
-  or any other way in). The developer may be partway through testing or
-  demoing a feature with data they set up by hand, or have loaded a real
-  dump, and none of these keep a copy. If you think the database needs a
-  fresh start, say so and let the developer run it. Plain `bothy artisan
-  migrate` (forward migrations only) is fine.
+- **Start, stop and rebuild stacks only when the developer asks.** That is
+  `bothy start`, `stop`, `rebuild` and `poweroff`. If the stack is not
+  running, say so and offer to start it. `bothy destroy` deletes the
+  database: leave it to the developer.
+- **Don't wipe the database on a whim.** That means `bothy mfs`, `bothy
+  db-import`, and artisan's own `migrate:fresh`, `migrate:refresh`,
+  `migrate:reset` and `db:wipe`. In a session where you are doing the coding
+  and the developer has said a fresh database is fine, go ahead. In a more
+  collaborative one, the developer may be partway through testing with data
+  they set up by hand, or have loaded a real dump, and none of these keep a
+  copy: ask first. Plain `bothy artisan migrate` (forward migrations only)
+  is always fine.
+- If a command is refused by a permission rule, don't look for another way
+  to run it: tell the developer the command and let them run it.
 - **To build the front-end assets, run `bothy assets`.** It runs `npm run
   build` once on the developer's Mac, outside any container, and exits with
   npm's exit code, so you can see whether the build worked. The app's
