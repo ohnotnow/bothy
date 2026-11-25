@@ -2,6 +2,7 @@ package bothy
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -14,36 +15,17 @@ import (
 // https://<app>.bothy.localhost. Apps opt in with traefik labels and by
 // joining the "bothy" network. HTTPS and the redirect from HTTP are set on
 // the proxy's entrypoints, so apps' labels don't mention TLS at all.
+const proxyProject = "bothy-proxy"
+
+// proxyCompose is the proxy's compose file, which bothy writes to its config
+// folder on every start. It lives in a file of its own, proxy-compose.yml, so
+// that Dependabot can see the Traefik image pinned in it and offer updates
+// (.github/dependabot.yml). Dependabot can't read an image out of a Go string.
+//
+//go:embed proxy-compose.yml
+var proxyCompose string
+
 const (
-	proxyProject = "bothy-proxy"
-	proxyCompose = `# Written by bothy on every start; edits here are overwritten.
-name: bothy-proxy
-services:
-  traefik:
-    image: traefik:v3.7.18@sha256:9c437ac4f09ce6f4980a8544902d3475fdf70a1a7c578729581d2535dfa7d635
-    command:
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=bothy
-      - --providers.file.filename=/etc/traefik/dynamic.yml
-      - --entrypoints.web.address=:80
-      - --entrypoints.web.http.redirections.entrypoint.to=websecure
-      - --entrypoints.web.http.redirections.entrypoint.scheme=https
-      - --entrypoints.websecure.address=:443
-      - --entrypoints.websecure.http.tls=true
-    ports:
-      - "127.0.0.1:80:80"
-      - "127.0.0.1:443:443"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro
-      - ./certs:/certs:ro
-    networks:
-      - bothy
-networks:
-  bothy:
-    name: bothy
-`
 	// The mkcert certificate is the default for every HTTPS request.
 	proxyDynamic = `# Written by bothy on every start; edits here are overwritten.
 tls:

@@ -66,10 +66,10 @@ What it does write:
 `start` calls `ensureProxy` (`proxy.go`) before bringing the app up:
 
 1. `ensureCert` (`certs.go`) makes the `*.bothy.localhost` certificate with mkcert if there is none, or a new one when less than 30 days are left.
-2. `writeProxyFiles` writes the proxy's compose file and Traefik's settings from constants in `proxy.go`, and reports whether either changed.
+2. `writeProxyFiles` writes the proxy's compose file (a copy of `internal/bothy/proxy-compose.yml`, built into the binary) and Traefik's settings (a constant in `proxy.go`), and reports whether either changed.
 3. If the proxy is running and nothing changed, it is left alone. If something changed it is recreated, because Traefik only reads the certificate at start. If it isn't running, bothy asks Docker which containers hold ports 80 and 443 and refuses if any do (usually lando's proxy).
 
-The Traefik image is pinned by version and digest in the `proxyCompose` constant. Dependabot watches `go.mod` and the workflow's actions, not that string, so raising it is a manual edit.
+The Traefik image is pinned by version and digest in `proxy-compose.yml`. That is a file of its own, not a Go string, so that Dependabot's `docker-compose` entry (`.github/dependabot.yml`) can see the image and offer updates. Nothing tests the proxy in CI, so a Traefik update wants a real `bothy start` before it is merged. After a release with a new image, each developer's proxy is recreated on their next `bothy start`.
 
 Apps join the proxy through Traefik labels and the external `bothy` network in their own `compose.dev.yml`. HTTPS and the redirect from HTTP are set on the proxy's entrypoints, so the labels never mention TLS.
 

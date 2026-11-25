@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-11-25
+### Changed
+- The proxy's compose file is now a file in the repo, built into the binary, so Dependabot can offer updates to the pinned Traefik image. bothy behaves as before.
+
 ## [0.10.0] - 2026-11-25
 ### Added
 - `db-export` and `db-import` check that a dump inside the app folder is ignored by git and by `.dockerignore`. On a terminal they offer to add the missing lines; without one they print a warning for an agent to pass on. The export or import goes ahead either way.
@@ -91,7 +95,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A shared Traefik proxy serving each app at `https://<app>.bothy.localhost`, with a mkcert certificate that renews itself.
 - An agent skill for working in an app run by bothy.
 
-[Unreleased]: https://github.com/ohnotnow/bothy/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/ohnotnow/bothy/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/ohnotnow/bothy/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/ohnotnow/bothy/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/ohnotnow/bothy/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/ohnotnow/bothy/compare/v0.7.0...v0.8.0

@@ -15,3 +15,13 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7  # the semver-*-days keys are ignored for gomod
+
+  # The Traefik image the shared proxy runs, pinned by version and digest in
+  # internal/bothy/proxy-compose.yml. Nothing tests the proxy in CI, so try
+  # `bothy start` with the new image before merging one of these.
+  - package-ecosystem: docker-compose
+    directory: "/internal/bothy"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

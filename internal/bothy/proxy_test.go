@@ -4,10 +4,20 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 )
+
+// Dependabot rewrites this line in proxy-compose.yml, and a tag with no
+// digest could be swapped for another image under the same name.
+func TestProxyImageIsPinnedByVersionAndDigest(t *testing.T) {
+	pinned := regexp.MustCompile(`(?m)^    image: traefik:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$`)
+	if !pinned.MatchString(proxyCompose) {
+		t.Fatalf("the traefik image isn't pinned as traefik:vX.Y.Z@sha256:<digest>:\n%s", proxyCompose)
+	}
+}
 
 // noProxy answers `docker compose ls` with nothing running and every other
 // captured command with no output.
