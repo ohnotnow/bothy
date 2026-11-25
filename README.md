@@ -224,6 +224,10 @@ To use a GUI database client, `bothy info` shows the port and login. The port is
 
 The temp folder clears itself, so copy the backup somewhere else if you want to keep it. On macOS that is `$TMPDIR`, where files are removed after a few days unused. On Linux it is usually `/tmp`, which many systems empty on reboot.
 
+A dump inside the app folder can be committed to git, or copied into the next image built from the folder. So when `db-export` writes one there, or `db-import` reads one, bothy checks that git ignores it, and that `.dockerignore` has the lines `**/*.sql` and `**/*.sql.gz` (a bare `*.sql` there only covers the top of the folder). If not, it asks whether to add the missing lines; for `.gitignore` they are `*.sql` and `*.sql.gz`. Without a terminal, which is how an agent runs it, it prints a warning and changes nothing. The export or import goes ahead whatever you answer.
+
+The git check needs git and a repo. The `.dockerignore` check runs when the folder has a `Dockerfile` or a `.dockerignore`, and only looks for those two lines: it doesn't work out what the file's other patterns match. A dump outside the app folder isn't checked, and one with a name that doesn't end in `.sql` or `.sql.gz` gets the warning without the offer.
+
 ### Opening an app to the network
 
 By default an app's ports are only reachable from your own Mac. To try it from another device, such as your phone over Tailscale, run `bothy start --lan`. That opens the app server and the mail catcher on every interface, and `start` lists what it opened. The next `bothy start` without `--lan` closes them again; so does a `bothy rebuild` without it.

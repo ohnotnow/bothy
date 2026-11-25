@@ -79,6 +79,7 @@ func cmdDbImport(a *App, args []string) int {
 	if code := a.checkDump(name, gz); code != 0 {
 		return code
 	}
+	a.checkDumpIgnored(name)
 	if code := a.backupBeforeWipe(backup); code != 0 {
 		return code
 	}
@@ -217,6 +218,7 @@ func cmdDbExport(a *App, args []string) int {
 		return 0
 	}
 
+	a.checkDumpIgnored(name)
 	if code := a.dumpTo(a.path(name), name); code != 0 {
 		return code
 	}

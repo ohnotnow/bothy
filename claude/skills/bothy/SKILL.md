@@ -96,6 +96,13 @@ password to look up. Don't go looking in `compose.dev.yml` or `.env` for one.
 (`bothy info` does print the app's database login, for the developer's GUI
 client. It is a local development password.)
 
+`bothy db-export` and `db-import` warn when the dump is inside the app folder
+and `.gitignore` or `.dockerignore` doesn't ignore it. A dump there can be
+committed, or copied into the next image built from the folder, and it may
+hold real people's data. If you see that warning, tell the developer in your
+reply, with the lines it says to add: it is easy to miss in your command
+output. Don't change the ignore files yourself unless they ask.
+
 Without a terminal (as when an agent runs it), bothy adds `-T` to `exec` by
 itself. You do not need to.
 

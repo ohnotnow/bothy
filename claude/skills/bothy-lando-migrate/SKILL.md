@@ -220,11 +220,13 @@ The app's agent instructions probably tell agents the team uses lando.
 
 ## 6. Ignore database dumps
 
-Make sure both `.gitignore` and `.dockerignore` have `*.sql` and `*.sql.gz`,
-adding the lines at the end if not (without a second blank line if the file
-already ends with one). A dump in the project folder could otherwise be
-committed, or baked into the production image by the Dockerfile's
-`COPY . /app`. Add nothing else to either file.
+Make sure `.gitignore` has `*.sql` and `*.sql.gz`, and `.dockerignore` has
+`**/*.sql` and `**/*.sql.gz`, adding the lines at the end if not (without a
+second blank line if the file already ends with one). The `**/` matters in
+`.dockerignore`: there a bare `*.sql` only covers the top of the folder,
+where in `.gitignore` it covers every subfolder too. A dump in the project
+folder could otherwise be committed, or baked into the production image by
+the Dockerfile's `COPY . /app`. Add nothing else to either file.
 
 Do not touch `.lando.yml`: the developer decides whether to keep it as a
 fallback.

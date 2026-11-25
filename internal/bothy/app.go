@@ -52,6 +52,9 @@ type App struct {
 	// Npm runs npm on this machine (not in a container) and returns its
 	// exit code; nil when it isn't installed. Used by assets and watch.
 	Npm func(args ...string) int
+	// Git runs git in the app folder, saying nothing, and returns its exit
+	// code; nil when it isn't installed. Used to check a dump is ignored.
+	Git func(args ...string) int
 	// LanAddress returns this machine's address on the local network, which
 	// info shows for ports open to the network; nil or "" means 127.0.0.1.
 	LanAddress func() string
@@ -144,6 +147,7 @@ func Main(args []string, skills fs.FS) int {
 		BackupDir:   os.TempDir(),
 		Mkcert:      findMkcert(),
 		Npm:         findNpm(dir),
+		Git:         findGit(dir),
 		LanAddress:  findLanAddress,
 		ReleaseURL:  LatestReleaseAPI,
 		Exe:         executable(),
