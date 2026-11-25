@@ -249,7 +249,7 @@ func TestSelfUpdate(t *testing.T) {
 		if len(*tried) != 1 || (*tried)[0] != a.Exe {
 			t.Errorf("tried %v, want [%s]", *tried, a.Exe)
 		}
-		if !strings.Contains(out(a), "Updated to v0.2.0.\nThe skill may have changed too. Run 'bothy install-skills --dry-run' to see.\n") {
+		if !strings.Contains(out(a), "Updated to v0.2.0.\nThe skills may have changed too. Run 'bothy install-skills --dry-run' to see.\n") {
 			t.Errorf("stdout %q", out(a))
 		}
 		assertOnlyBinary(t, a)

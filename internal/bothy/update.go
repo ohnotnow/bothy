@@ -203,7 +203,7 @@ func cmdSelfUpdate(a *App, args []string) int {
 		return 1
 	}
 	fmt.Fprintf(a.Stdout, "Updated to %s.\n", rel.TagName)
-	fmt.Fprintln(a.Stdout, "The skill may have changed too. Run 'bothy install-skills --dry-run' to see.")
+	fmt.Fprintln(a.Stdout, "The skills may have changed too. Run 'bothy install-skills --dry-run' to see.")
 	return 0
 }
 

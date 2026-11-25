@@ -70,19 +70,25 @@ mkcert -install
 
 After that, bothy makes its own `*.bothy.localhost` certificate the first time you run `bothy start`, and renews it by itself once it has less than 30 days left. Neither step asks for your password.
 
-### Install the Claude Code skill
+### Install the Claude Code skills
 
-bothy carries a [Claude Code](https://claude.com/claude-code) skill that tells an agent how to work in an app run by bothy. It's built into the binary, so the skill always matches the bothy you have:
+bothy carries two [Claude Code](https://claude.com/claude-code) skills. They're built into the binary, so they always match the bothy you have.
+
+- **`bothy`** tells an agent how to work in an app run by bothy: which commands run artisan, composer and the tests, and which ones to leave to you.
+- **`bothy-lando-migrate`** takes an agent through moving an app's local development from lando to bothy. It writes the app's `compose.dev.yml` and a development-only Dockerfile, and leaves the app's own Dockerfile, CI and deploy files alone, apart from two small fixes it offers. It is optional: you only need it while you have apps left to move.
 
 ```bash
-bothy install-skills
+bothy install-skills          # the bothy skill
+bothy install-skills --all    # and bothy-lando-migrate
 ```
 
-That copies it into `~/.claude/skills/bothy/`. It never deletes anything, and asks before replacing a copy you've changed (`d` at the prompt shows the difference). `--dry-run` shows what it would do, `--force` replaces without asking, and `--dir` installs under another folder, e.g. `--dir ~/.config/opencode` for another agent. `bothy version` says whether your installed copy is up to date.
+They go into `~/.claude/skills/`. Once `bothy-lando-migrate` is installed, a plain `bothy install-skills` keeps it up to date along with the other. When you have no apps left to move, delete `~/.claude/skills/bothy-lando-migrate/` and it stays gone.
+
+`install-skills` never deletes anything, and asks before replacing a copy you've changed (`d` at the prompt shows the difference). `--dry-run` shows what it would do, `--force` replaces without asking, and `--dir` installs under another folder, e.g. `--dir ~/.config/opencode` for another agent. `bothy version` says whether your installed copies are up to date.
 
 ### Keep agents off the commands that stop stacks or wipe data
 
-The skill tells an agent to start or stop stacks only when you ask, not to wipe the database without checking, and never to run `bothy watch`. If you'd rather an agent never ran them at all, deny those commands in `~/.claude/settings.json`:
+The `bothy` skill tells an agent to start or stop stacks only when you ask, not to wipe the database without checking, and never to run `bothy watch`. If you'd rather an agent never ran them at all, deny those commands in `~/.claude/settings.json`:
 
 ```json
 {
@@ -173,7 +179,7 @@ These work from any folder:
 | `bothy volumes` | lists every bothy volume and its size, running or not |
 | `bothy version` | prints the version, and says if a newer release is out |
 | `bothy self-update` | replaces bothy with the latest release, after asking (see [Updating](#updating)) |
-| `bothy install-skills` | installs the Claude Code skill for this bothy (see [Install the Claude Code skill](#install-the-claude-code-skill)) |
+| `bothy install-skills [--all]` | installs the Claude Code skill for this bothy; `--all` adds the lando migration skill (see [Install the Claude Code skills](#install-the-claude-code-skills)) |
 
 Put `--dry-run` before any command to see the docker commands without running them:
 
@@ -189,7 +195,7 @@ After the swap it runs the new binary once. If that fails, which is what happens
 
 A binary built from source isn't replaced: update it with `git pull` and `make install`.
 
-A new release may carry a changed skill too. After updating, `bothy install-skills --dry-run` shows whether it has.
+A new release may carry changed skills too. After updating, `bothy install-skills --dry-run` shows whether it has.
 
 ### Checking before you push
 

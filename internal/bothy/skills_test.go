@@ -12,6 +12,9 @@ var testSkills = fstest.MapFS{
 	"skills/bothy/SKILL.md":  {Data: []byte("bothy skill v2\n")},
 	"skills/bothy/EXTRA.md":  {Data: []byte("extra v2\n")},
 	"agents/bothy-helper.md": {Data: []byte("helper v2\n")},
+	// an optional skill: only installed with --all
+	"skills/bothy-optional/SKILL.md":         {Data: []byte("optional v2\n")},
+	"skills/bothy-optional/reference/a.conf": {Data: []byte("reference v2\n")},
 }
 
 // skillsApp is a fakeApp with test skills, installing into a temp dir.
@@ -146,6 +149,38 @@ func TestInstallSkills(t *testing.T) {
 		}
 	})
 
+	t.Run("an optional skill needs --all, is then kept up to date, and stays gone once its folder is deleted", func(t *testing.T) {
+		a := skillsApp(t)
+		folder := filepath.Join(a.ClaudeDir, "skills/bothy-optional")
+		skill, ref := filepath.Join(folder, "SKILL.md"), filepath.Join(folder, "reference/a.conf")
+
+		output, _ := installAgain(t, a, "")
+		if readOr(t, skill) != "<missing>" || !strings.Contains(output, "skills/bothy-optional: not installed (optional: --all adds it)") {
+			t.Fatalf("a plain install added it, or didn't mention it:\n%s", output)
+		}
+		output, _ = installAgain(t, a, "", "--dry-run", "--all")
+		if readOr(t, skill) != "<missing>" || !strings.Contains(output, "skills/bothy-optional/SKILL.md: would be added") {
+			t.Fatalf("dry run with --all:\n%s", output)
+		}
+		installAgain(t, a, "", "--all")
+		if readOr(t, skill) != "optional v2\n" || readOr(t, ref) != "reference v2\n" {
+			t.Fatalf("--all: skill %q, reference %q", readOr(t, skill), readOr(t, ref))
+		}
+
+		os.WriteFile(skill, []byte("optional v1\n"), 0o644)
+		os.Remove(ref)
+		output, _ = installAgain(t, a, "", "--force")
+		if readOr(t, skill) != "optional v2\n" || readOr(t, ref) != "reference v2\n" || strings.Contains(output, "not installed") {
+			t.Fatalf("a plain install should update an installed optional skill: skill %q, reference %q\n%s", readOr(t, skill), readOr(t, ref), output)
+		}
+
+		os.RemoveAll(folder)
+		installAgain(t, a, "", "--force")
+		if readOr(t, skill) != "<missing>" {
+			t.Fatal("a deleted optional skill came back without --all")
+		}
+	})
+
 	t.Run("files bothy doesn't ship are never touched", func(t *testing.T) {
 		a := skillsApp(t)
 		retired := filepath.Join(a.ClaudeDir, "skills/bothy-old/SKILL.md")
@@ -176,5 +211,25 @@ func TestVersionReportsSkills(t *testing.T) {
 	os.WriteFile(filepath.Join(a.ClaudeDir, "skills/bothy/SKILL.md"), []byte("old\n"), 0o644)
 	if s := version(); !strings.Contains(s, "skills/bothy/SKILL.md in "+a.ClaudeDir+" differ") {
 		t.Fatal(s)
+	}
+}
+
+func TestVersionOnlyCountsAnOptionalSkillOnceInstalled(t *testing.T) {
+	setBuild(t, "dev", "", "")
+	a := skillsApp(t)
+	version := func() string {
+		a.Stdout.(interface{ Reset() }).Reset()
+		a.Main([]string{"version"})
+		return out(a)
+	}
+	installAgain(t, a, "", "--all")
+	optional := filepath.Join(a.ClaudeDir, "skills/bothy-optional")
+	os.WriteFile(filepath.Join(optional, "SKILL.md"), []byte("old\n"), 0o644)
+	if s := version(); !strings.Contains(s, "skills/bothy-optional/SKILL.md in "+a.ClaudeDir+" differ") {
+		t.Fatalf("an installed optional skill should be checked:\n%s", s)
+	}
+	os.RemoveAll(optional)
+	if s := version(); !strings.Contains(s, "skills: up to date in "+a.ClaudeDir) {
+		t.Fatalf("a deleted optional skill should not be reported:\n%s", s)
 	}
 }

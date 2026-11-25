@@ -19,7 +19,41 @@ import (
 // (claudefiles.go at the repo root), so a binary and its skill always come
 // from the same release. `install-skills` copies them into ~/.claude, and
 // `version` says when the installed copies differ. Ported from ait's
-// internal/ait/skills.go; keep the two behaving the same.
+// internal/ait/skills.go; keep the two behaving the same, apart from
+// optional skills, which only bothy has.
+
+// baseSkill is the skill every install gets. Any other built-in skill is
+// optional: install-skills adds it with --all, and from then on keeps it up
+// to date like the base one, until the developer deletes its folder.
+const baseSkill = "bothy"
+
+// skillOf returns the skill a built-in file belongs to: "bothy-lando-migrate"
+// for skills/bothy-lando-migrate/SKILL.md. Anything outside skills/<name>/
+// goes with the base skill.
+func skillOf(rel string) string {
+	parts := strings.Split(rel, "/")
+	if len(parts) > 2 && parts[0] == "skills" {
+		return parts[1]
+	}
+	return baseSkill
+}
+
+// wantedSkillFiles drops the files of optional skills that aren't installed
+// in claudeDir, unless all is set, and returns those skills' names. list is
+// sorted, so a skill's files sit together.
+func wantedSkillFiles(list []skillFile, claudeDir string, all bool) (wanted []skillFile, skipped []string) {
+	for _, f := range list {
+		name := skillOf(f.rel)
+		if all || name == baseSkill || dirExists(filepath.Join(claudeDir, "skills", name)) {
+			wanted = append(wanted, f)
+			continue
+		}
+		if len(skipped) == 0 || skipped[len(skipped)-1] != name {
+			skipped = append(skipped, name)
+		}
+	}
+	return wanted, skipped
+}
 
 // skillFile is one built-in file and where it would be installed.
 type skillFile struct {
@@ -67,12 +101,14 @@ func DefaultClaudeDir() string {
 }
 
 // skillsStatus is one line for `bothy version`: whether the installed skills
-// match the ones built into this binary.
+// match the ones built into this binary. An optional skill that isn't
+// installed is not counted.
 func skillsStatus(files fs.FS, claudeDir string) string {
 	list, err := skillFilesFor(files, claudeDir)
 	if err != nil {
 		return "skills: couldn't read the built-in copies: " + err.Error()
 	}
+	list, _ = wantedSkillFiles(list, claudeDir, false)
 	var missing, differ []string
 	for _, f := range list {
 		switch f.installed() {
@@ -96,32 +132,35 @@ func skillsStatus(files fs.FS, claudeDir string) string {
 // written; an identical one is left alone; a changed one is replaced only
 // with --force or a yes at the prompt ([y/N/d], d shows the diff). With no
 // terminal to ask on, a changed file is left as it is and reported. Nothing
-// is ever deleted.
+// is ever deleted. An optional skill is only added with --all; once it is
+// installed, a plain run keeps it up to date.
 func cmdInstallSkills(a *App, args []string) int {
 	fset := flag.NewFlagSet("install-skills", flag.ContinueOnError)
 	fset.SetOutput(io.Discard)
 	dir := fset.String("dir", a.ClaudeDir, "")
 	force := fset.Bool("force", false, "")
 	dryRun := fset.Bool("dry-run", false, "")
+	all := fset.Bool("all", false, "")
 	if err := fset.Parse(args); err != nil || fset.NArg() > 0 {
-		return a.usageError("usage: bothy install-skills [--dry-run] [--force] [--dir D]")
+		return a.usageError("usage: bothy install-skills [--all] [--dry-run] [--force] [--dir D]")
 	}
 	if a.Skills == nil {
 		fmt.Fprintln(a.Stderr, "bothy: this build has no skills built in")
 		return 1
 	}
-	if err := a.installSkills(*dir, *force, *dryRun || a.dryRun); err != nil {
+	if err := a.installSkills(*dir, *force, *dryRun || a.dryRun, *all); err != nil {
 		fmt.Fprintf(a.Stderr, "bothy: %v\n", err)
 		return 1
 	}
 	return 0
 }
 
-func (a *App) installSkills(claudeDir string, force, dryRun bool) error {
+func (a *App) installSkills(claudeDir string, force, dryRun, all bool) error {
 	list, err := skillFilesFor(a.Skills, claudeDir)
 	if err != nil {
 		return err
 	}
+	list, skipped := wantedSkillFiles(list, claudeDir, all)
 	out := a.Stdout
 	if dryRun {
 		fmt.Fprintf(out, "Dry run: nothing will be written. Comparing with %s:\n", claudeDir)
@@ -165,6 +204,9 @@ func (a *App) installSkills(claudeDir string, force, dryRun bool) error {
 			verb = "replaced"
 		}
 		fmt.Fprintf(out, "  %s: %s\n", f.rel, verb)
+	}
+	for _, name := range skipped {
+		fmt.Fprintf(out, "  skills/%s: not installed (optional: --all adds it)\n", name)
 	}
 	if len(left) > 0 && !dryRun {
 		fmt.Fprintf(out, "Left as they were: %s.\n", strings.Join(left, ", "))

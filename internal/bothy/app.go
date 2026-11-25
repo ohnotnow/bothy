@@ -112,7 +112,7 @@ func init() {
 		{"volumes", "", "list every bothy volume and its size, running or not", false, cmdVolumes},
 		{"version", "", "print the version and say if a newer release is out", false, cmdVersion},
 		{"self-update", "[--check] [--yes]", "replace bothy with the latest release", false, cmdSelfUpdate},
-		{"install-skills", "[--dry-run] [--force] [--dir D]", "install the Claude Code skill for this bothy", false, cmdInstallSkills},
+		{"install-skills", "[--all] [--dry-run] [--force] [--dir D]", "install the Claude Code skill for this bothy (--all adds the lando migration skill)", false, cmdInstallSkills},
 		{"help", "", "show this help", false, cmdHelp},
 	}
 }
