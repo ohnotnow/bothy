@@ -24,10 +24,15 @@ import (
 // by mistake gets "access denied", not a wipe.
 const (
 	ciDatabase = "bothy_ci"
-	ciSetupSQL = "CREATE DATABASE IF NOT EXISTS `bothy_ci`;\n" +
+	// ciCreating is printed by the setup SQL itself, only on the run that
+	// makes the database, so it has to come before the CREATE.
+	ciCreating = "Creating the bothy_ci database and user for the tests (first run only; bothy destroy removes them)."
+	ciSetupSQL = "SELECT '" + ciCreating + "' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'bothy_ci');\n" +
+		"CREATE DATABASE IF NOT EXISTS `bothy_ci`;\n" +
 		"CREATE USER IF NOT EXISTS 'bothy_ci'@'%' IDENTIFIED BY 'bothy_ci';\n" +
 		"GRANT ALL PRIVILEGES ON `bothy\\_ci%`.* TO 'bothy_ci'@'%';\n"
-	ciSetup = asRoot + "mariadb -uroot"
+	// -N: no column heading above the ciCreating line
+	ciSetup = asRoot + "mariadb -uroot -N"
 )
 
 // ciTestEnv points the tests at the bothy_ci database. These win over plain
@@ -72,6 +77,9 @@ const exitInterrupted = 130
 func cmdCi(a *App, args []string) int {
 	if len(args) > 0 {
 		return a.usageError("ci takes no arguments")
+	}
+	if code := a.refuseCachedConfig(); code != 0 {
+		return code
 	}
 	if !a.dryRun {
 		if code := a.needRunning(appService, dbService); code != 0 {
@@ -269,8 +277,8 @@ func (a *App) ciAudit() (ciStatus, int) {
 
 func (a *App) ciPint() (ciStatus, int) {
 	if !fileExists(filepath.Join(a.Dir, "vendor", "bin", "pint")) {
-		fmt.Fprintln(a.Stdout, "Pint isn't installed (no vendor/bin/pint).")
-		return ciSkipped, 0
+		fmt.Fprintln(a.Stdout, "Pint isn't installed (no vendor/bin/pint). Migrate to Pint if possible (bothy composer require --dev laravel/pint).")
+		return ciFailed, 0
 	}
 	return a.ciRun(a.inApp("php", "vendor/bin/pint", "--test"))
 }

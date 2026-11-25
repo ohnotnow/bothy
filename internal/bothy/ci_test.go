@@ -91,6 +91,15 @@ func TestCiTestUserCanOnlyReachItsOwnDatabases(t *testing.T) {
 	}
 }
 
+func TestCiSaysItIsCreatingTheDatabaseBeforeCreatingIt(t *testing.T) {
+	// The notice is only printed while the database doesn't exist, so asked
+	// after the CREATE it would never show.
+	notice, create := strings.Index(ciSetupSQL, ciCreating), strings.Index(ciSetupSQL, "CREATE DATABASE")
+	if notice < 0 || create < notice {
+		t.Fatalf("the notice should come before the CREATE:\n%s", ciSetupSQL)
+	}
+}
+
 func TestCiKeepsGoingAfterAFailureAndFailsAtTheEnd(t *testing.T) {
 	a, calls, stdout, _ := ciApp(t, 1) // composer audit fails
 	if code := a.Main([]string{"ci"}); code != 1 {
@@ -126,11 +135,11 @@ func TestCiNeedsTheStackRunning(t *testing.T) {
 	}
 }
 
-func TestCiSkipsPintAndParallelWhenNotInstalled(t *testing.T) {
+func TestCiFailsWithoutPintAndRunsSeriallyWithoutParatest(t *testing.T) {
 	a, calls, stdout, _ := ciApp(t)
 	os.RemoveAll(filepath.Join(a.Dir, "vendor"))
-	if code := a.Main([]string{"ci"}); code != 0 {
-		t.Fatalf("exit %d, want 0 (a skip isn't a failure)\n%s", code, stdout)
+	if code := a.Main([]string{"ci"}); code != 1 {
+		t.Fatalf("exit %d, want 1 (an app without Pint fails)\n%s", code, stdout)
 	}
 	for _, c := range *calls {
 		if strings.Contains(strings.Join(c, " "), "pint") {
@@ -141,8 +150,9 @@ func TestCiSkipsPintAndParallelWhenNotInstalled(t *testing.T) {
 	if last[len(last)-1] != "test" {
 		t.Fatalf("tests should run serially without paratest: %q", last)
 	}
-	if !strings.Contains(stdout.String(), "skipped  pint") {
-		t.Fatalf("summary should show pint skipped:\n%s", stdout)
+	out := stdout.String()
+	if !strings.Contains(out, "FAILED   pint") || !strings.Contains(out, "bothy composer require --dev laravel/pint") {
+		t.Fatalf("summary should show pint failed, and the output say how to add it:\n%s", out)
 	}
 }
 

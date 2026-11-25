@@ -65,13 +65,22 @@ running it.
 `tinker`, `shell` (alias `ssh`), `mysql` (alias `database`) and `horizon` are
 interactive or run until stopped, so they are for the developer, not for you.
 
-`bothy ci` runs what the team's GitLab pipelines check, in under a minute:
+`bothy test`, `testf` and `ci` refuse to run while Laravel's config is cached
+(`bootstrap/cache/config.php`): with a cached config the tests ignore their
+own database settings and would wipe the developer's database. Don't clear
+the cache yourself, by `config:clear`, `optimize:clear` or deleting the file:
+the developer may have cached it on purpose while trying something. Stop,
+tell them, and ask them to run `bothy artisan config:clear`.
+
+`bothy ci` runs what the team's GitLab pipelines check:
 `.env` and `.env.example` have the same keys, no stray `dd(` or `dump(` in
 `app/`, `composer audit`, `pint --test`, and the tests against MariaDB in a
 database of bothy's own (`bothy_ci`), so the developer's data is never
-touched. Run it when you think a piece of work is finished, and before
-suggesting the developer pushes. Every check runs and a summary comes last;
-it exits 1 if any failed. A test that fails here but passes under
+touched. Run it only when the developer asks; before a push is a good
+moment to offer it. It is their call because its first run makes a database
+and a user in their MariaDB, and its output can be very long (one
+misconfiguration can fail hundreds of tests). Every check runs and a summary
+comes last; it exits 1 if any failed. A test that fails here but passes under
 `bothy test` (in-memory SQLite) is usually a real difference between the
 two databases, and worth telling the developer about, not working round.
 The env check prints key names only; never go and read `.env` to look at

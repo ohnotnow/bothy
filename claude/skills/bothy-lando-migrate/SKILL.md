@@ -325,7 +325,7 @@ developer will say no. On a yes, keep it brief, from the `bothy` skill:
 starting and stopping, `info` (the ports change between starts; setting
 `BOTHY_FORWARD_DB_PORT` in `.env` pins the database's, for a GUI client),
 `artisan`/`tinker`/`test` (`bothy test --parallel` for a faster run),
-`ci` (the team's usual CI checks in under a minute, before a push),
+`ci` (the team's usual CI checks, before a push),
 `shell` (or `ssh`) for a shell in the app's container, `mfs`, `assets` and
 `watch` (npm runs on the Mac, which is why lando's node service has gone),
 `db-export`/`db-import`, and the `permissions.deny` list in bothy's README

@@ -193,17 +193,19 @@ A new release may carry a changed skill too. After updating, `bothy install-skil
 
 ### Checking before you push
 
-`bothy ci` runs, on your Mac, the checks the team's GitLab pipelines run in their test stage, so a forgotten `composer update` shows up in seconds, not after a push and a long wait. With the stack up, it checks:
+`bothy ci` runs, on your Mac, the checks the team's GitLab pipelines run in their test stage, so a forgotten `composer update` shows up quickly, not after a push and a long wait. With the stack up, it checks:
 
-1. **env keys:** `.env` and `.env.example` have the same keys, both ways. bothy's own `BOTHY_*` keys are left out. It prints key names only, never values.
+1. **env keys:** `.env` and `.env.example` have the same keys, both ways. The pipelines can't see your own `.env`, so this is bothy's stand-in for their env checks: it catches a key added to one file and not the other. bothy's own `BOTHY_*` keys are left out. It prints key names only, never values.
 2. **stray dd/dump:** no `dd(` or `dump(` under `app/`, the same search as CI's, except that this one really fails.
 3. **composer audit**
-4. **pint:** `pint --test`, skipped if the app doesn't have Pint.
+4. **pint:** `pint --test`. An app without Pint fails this check, with the command to add it.
 5. **tests:** `php artisan test` against MariaDB, in parallel when paratest is installed.
 
 Every check runs, then a summary lists each one; it exits 1 if any failed.
 
-The tests run in a database of bothy's own, `bothy_ci`, which `bothy ci` creates in the app's MariaDB along with a `bothy_ci` user that can only reach that database and the copies parallel testing makes. Your own database and its data aren't touched: a test pointed at it by mistake gets "access denied". Tests that pass under `bothy test` (in-memory SQLite) can fail here; that is usually a real difference between the two databases, such as a query on a column that doesn't exist, which SQLite lets through.
+The tests run in a database of bothy's own, `bothy_ci`, which `bothy ci` creates in the app's MariaDB along with a `bothy_ci` user that can only reach that database and the copies parallel testing makes. It says so on the run that creates them, and `bothy destroy` removes them. Your own database and its data aren't touched: a test pointed at it by mistake gets "access denied". Tests that pass under `bothy test` (in-memory SQLite) can fail here; that is usually a real difference between the two databases, such as a query on a column that doesn't exist, which SQLite lets through.
+
+`bothy ci`, `bothy test` and `bothy testf` refuse to run while Laravel's config is cached (`bootstrap/cache/config.php`). With a cached config Laravel ignores the tests' own database settings, so they would run against your database and wipe it. `bothy artisan config:clear` removes the cache.
 
 It is nearly as good as CI, not CI: it skips CI's checks against the QA and production settings held in GitLab, and doesn't build the image.
 

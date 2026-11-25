@@ -148,13 +148,31 @@ func cmdComposer(a *App, args []string) int {
 	return a.Run(a.inApp(append([]string{"composer"}, args...)...))
 }
 
+// refuseCachedConfig stops a test run when Laravel has a cached config. With
+// one, Laravel ignores the environment, phpunit.xml's settings included, so
+// the tests would run against whatever database was cached, usually the
+// developer's own, and wipe it.
+func (a *App) refuseCachedConfig() int {
+	if a.dryRun || !fileExists(filepath.Join(a.Dir, "bootstrap", "cache", "config.php")) {
+		return 0
+	}
+	fmt.Fprintln(a.Stderr, "bothy: Laravel's config is cached (bootstrap/cache/config.php), so the tests would ignore their own database settings and could wipe your database. Run `bothy artisan config:clear` first.")
+	return 1
+}
+
 func cmdTest(a *App, args []string) int {
+	if code := a.refuseCachedConfig(); code != 0 {
+		return code
+	}
 	return a.Run(a.artisan(append([]string{"test"}, args...)...))
 }
 
 func cmdTestf(a *App, args []string) int {
 	if len(args) == 0 {
 		return a.usageError("testf needs a filter, e.g. bothy testf UserTest")
+	}
+	if code := a.refuseCachedConfig(); code != 0 {
+		return code
 	}
 	return a.Run(a.artisan(append([]string{"test", "--filter", args[0]}, args[1:]...)...))
 }

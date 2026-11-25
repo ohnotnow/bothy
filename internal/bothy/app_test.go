@@ -236,6 +236,23 @@ func TestExitCodePassesThrough(t *testing.T) {
 	}
 }
 
+func TestCachedConfigStopsTheTests(t *testing.T) {
+	for _, args := range [][]string{{"test"}, {"testf", "UserTest"}, {"ci"}} {
+		a, calls, _, stderr := fakeApp(t, true)
+		a.Output = func([]string) ([]byte, error) { t.Errorf("%q: asked docker something", args); return nil, nil }
+		write(t, a.Dir, "bootstrap/cache/config.php", "<?php return [];\n")
+		if code := a.Main(args); code != 1 {
+			t.Errorf("%q: exit %d, want 1", args, code)
+		}
+		if len(*calls) != 0 {
+			t.Errorf("%q: docker was called: %q", args, *calls)
+		}
+		if !strings.Contains(stderr.String(), "bothy artisan config:clear") {
+			t.Errorf("%q: stderr should say how to clear it: %q", args, stderr)
+		}
+	}
+}
+
 func TestMissingComposeFileBailsOut(t *testing.T) {
 	a, calls, _, stderr := fakeApp(t, false)
 	if code := a.Main([]string{"start"}); code != exitNotFound {
