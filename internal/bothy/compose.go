@@ -201,6 +201,13 @@ func cmdHorizon(a *App, args []string) int {
 	return a.Run(a.artisan(append([]string{"horizon"}, args...)...))
 }
 
+// cmdLogs passes its arguments straight to `compose logs`, so
+// `bothy logs -f appserver` follows one service and plain `bothy logs`
+// prints what every service has logged so far.
+func cmdLogs(a *App, args []string) int {
+	return a.Run(compose(append([]string{"logs"}, args...)...))
+}
+
 func cmdShell(a *App, args []string) int {
 	if len(args) > 0 {
 		return a.usageError("shell takes no arguments")

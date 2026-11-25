@@ -89,6 +89,7 @@ func init() {
 		{"start", "[--lan]", "start the app's stack (--lan opens it to the network)", true, cmdStart},
 		{"stop", "", "stop the app's stack", true, cmdStop},
 		{"info", "", "show the app's addresses and ports", true, cmdInfo},
+		{"logs", "[args]", "show the stack's logs (docker compose logs), e.g. bothy logs -f appserver", true, cmdLogs},
 		{"rebuild", "[--lan]", "stop, rebuild with fresh base images, start (keeps the data)", true, cmdRebuild},
 		{"destroy", "", "stop and delete the app's volumes, including the database (asks first)", true, cmdDestroy},
 		{"artisan", "<args>", "run php artisan in the app container", true, cmdArtisan},

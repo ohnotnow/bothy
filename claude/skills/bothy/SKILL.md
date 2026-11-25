@@ -58,12 +58,16 @@ running it.
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
 | `bothy ci` | the team's usual CI checks (below) |
 | `bothy db-export [file]` | dumps the database to a file (default `<folder>-<date>-<time>.sql.gz`; never overwrites) |
+| `bothy logs --tail <n> [service]` | the last lines a service logged, e.g. `bothy logs --tail 50 appserver` (read-only) |
 | `bothy info` | the app's addresses and ports, which Docker picks at random (read-only) |
 | `bothy ls` | lists running bothy projects (read-only) |
 | `bothy volumes` | lists every bothy volume and its size, running or not (read-only) |
 
 `tinker`, `shell` (alias `ssh`), `mysql` (alias `database`) and `horizon` are
 interactive or run until stopped, so they are for the developer, not for you.
+The same goes for `bothy logs -f` (or `--follow`), which never ends. Give
+`bothy logs` a `--tail` and a service name: without them it prints
+everything every service has logged since it started.
 
 `bothy test`, `testf` and `ci` refuse to run while Laravel's config is cached
 (`bootstrap/cache/config.php`): with a cached config the tests ignore their

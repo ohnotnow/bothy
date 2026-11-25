@@ -280,8 +280,8 @@ On a yes, and only then:
 - `bothy artisan migrate:status`, and `bothy artisan migrate` if any are
   pending.
 - `bothy test`.
-- If the app has minio: `docker compose -f compose.dev.yml logs minio-bucket`
-  says the bucket was made or was there. Don't test the console address with
+- If the app has minio: `bothy logs minio-bucket` says the bucket was made
+  or was there. Don't test the console address with
   curl: its root answers non-browser requests as the S3 API (a 403), while a
   browser is sent on to the console. That is normal, so don't report it.
 - If the app has meilisearch: its port from `bothy info` answers

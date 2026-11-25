@@ -155,6 +155,7 @@ bothy only runs in a folder with a `compose.dev.yml`. It doesn't look in parent 
 | `bothy rebuild [--lan]` | `down`, `build --pull` (fresh base images), `up -d`; keeps the database |
 | `bothy destroy` | `down -v`, deleting the app's volumes including the database; asks first |
 | `bothy info` | the app's address and the ports Docker gave its services |
+| `bothy logs [args]` | `logs [args]`: what every service has logged so far, or e.g. `bothy logs -f appserver` to follow one service, `bothy logs --tail 50 database` for its last lines |
 | `bothy artisan <args>` | `php artisan <args>` in the `appserver` container |
 | `bothy tinker` | `php artisan tinker` |
 | `bothy composer <args>` | `composer <args>` in `appserver` |

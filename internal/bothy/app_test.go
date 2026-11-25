@@ -124,6 +124,9 @@ func TestCommandsExpand(t *testing.T) {
 		{words("test --parallel"), words("compose -f compose.dev.yml exec appserver php artisan test --parallel")},
 		{words("testf UserTest --stop-on-failure"), words("compose -f compose.dev.yml exec appserver php artisan test --filter UserTest --stop-on-failure")},
 		{words("horizon"), words("compose -f compose.dev.yml exec appserver php artisan horizon")},
+		{words("logs"), words("compose -f compose.dev.yml logs")},
+		{words("logs -f appserver"), words("compose -f compose.dev.yml logs -f appserver")},
+		{words("logs --tail 50 database"), words("compose -f compose.dev.yml logs --tail 50 database")},
 		{words("shell"), words("compose -f compose.dev.yml exec appserver bash")},
 		{words("ssh"), words("compose -f compose.dev.yml exec appserver bash")},
 	}
