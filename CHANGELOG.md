@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-26
+### Added
+- `bothy pest`, which runs `vendor/bin/pest` with its arguments, so Pest's own flags and `--help` work. Like `test`, it refuses while Laravel's config is cached.
+- `bothy lint` (or `bothy pint`), which runs `vendor/bin/pint` with its arguments. An app without Pint gets the same message as in `bothy ci`.
+
+### Changed
+- The `bothy-lando-migrate` skill no longer rewrites an app's agent guidance (`.ai/guidelines/`, `CLAUDE.md`, `AGENTS.md`) or offers to regenerate it with Boost.
+- The `bothy` skill lets agents run `bothy artisan tinker --execute '...'` for debugging, with the quoting to use, no printing of secrets, and the same go-ahead as `bothy mfs` for database writes. Interactive `bothy tinker` stays the developer's.
+
 ## [0.10.1] - 2026-11-25
 ### Changed
 - The proxy's compose file is now a file in the repo, built into the binary, so Dependabot can offer updates to the pinned Traefik image. bothy behaves as before.
@@ -95,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A shared Traefik proxy serving each app at `https://<app>.bothy.localhost`, with a mkcert certificate that renews itself.
 - An agent skill for working in an app run by bothy.
 
-[Unreleased]: https://github.com/ohnotnow/bothy/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/ohnotnow/bothy/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/ohnotnow/bothy/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/ohnotnow/bothy/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/ohnotnow/bothy/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/ohnotnow/bothy/compare/v0.8.0...v0.9.0
