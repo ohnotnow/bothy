@@ -161,6 +161,8 @@ bothy only runs in a folder with a `compose.dev.yml`. It doesn't look in parent 
 | `bothy composer <args>` | `composer <args>` in `appserver` |
 | `bothy test [args]` | `php artisan test [args]` |
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
+| `bothy pest [args]` | `vendor/bin/pest [args]`, so Pest's own flags and `bothy pest --help` work |
+| `bothy lint [args]` (or `pint`) | `vendor/bin/pint [args]`: fixes the code style; `--test` only checks, `--dirty` only looks at files with uncommitted changes. An app without Pint gets the command to add it |
 | `bothy ci` | the team's usual CI checks, before you push (see [Checking before you push](#checking-before-you-push)) |
 | `bothy mfs [args]` | wipes the database: `migrate:fresh --seed --seeder=TestDataSeeder [args]`; `--seeder=OtherSeeder` picks another seeder |
 | `bothy horizon` | Horizon in the foreground (ctrl-c to stop) |
@@ -212,7 +214,7 @@ Every check runs, then a summary lists each one; it exits 1 if any failed.
 
 The tests run in a database of bothy's own, `bothy_ci`, which `bothy ci` creates in the app's MariaDB along with a `bothy_ci` user that can only reach that database and the copies parallel testing makes. It says so on the run that creates them, and `bothy destroy` removes them. Your own database and its data aren't touched: a test pointed at it by mistake gets "access denied". Tests that pass under `bothy test` (in-memory SQLite) can fail here; that is usually a real difference between the two databases, such as a query on a column that doesn't exist, which SQLite lets through.
 
-`bothy ci`, `bothy test` and `bothy testf` refuse to run while Laravel's config is cached (`bootstrap/cache/config.php`). With a cached config Laravel ignores the tests' own database settings, so they would run against your database and wipe it. `bothy artisan config:clear` removes the cache.
+`bothy ci`, `bothy test`, `bothy testf` and `bothy pest` refuse to run while Laravel's config is cached (`bootstrap/cache/config.php`). With a cached config Laravel ignores the tests' own database settings, so they would run against your database and wipe it. `bothy artisan config:clear` removes the cache.
 
 It is nearly as good as CI, not CI: it skips CI's checks against the QA and production settings held in GitLab, and doesn't build the image.
 

@@ -177,6 +177,36 @@ func cmdTestf(a *App, args []string) int {
 	return a.Run(a.artisan(append([]string{"test", "--filter", args[0]}, args[1:]...)...))
 }
 
+// hasVendorBin reports whether the app has installed a composer binary.
+func (a *App) hasVendorBin(name string) bool {
+	return fileExists(filepath.Join(a.Dir, "vendor", "bin", name))
+}
+
+// pintMissing is what lint and ci say about an app without Pint. bothy
+// doesn't fall back to php-cs-fixer: an app still on it should move to Pint.
+const pintMissing = "Pint isn't installed (no vendor/bin/pint). Migrate to Pint if possible (bothy composer require --dev laravel/pint)."
+
+// cmdPest runs Pest itself, so its own flags and --help work, which
+// `artisan test` doesn't pass on.
+func cmdPest(a *App, args []string) int {
+	if code := a.refuseCachedConfig(); code != 0 {
+		return code
+	}
+	if !a.hasVendorBin("pest") {
+		fmt.Fprintln(a.Stderr, "bothy: Pest isn't installed (no vendor/bin/pest). `bothy test` runs the tests through artisan instead.")
+		return 1
+	}
+	return a.Run(a.inApp(append([]string{"php", "vendor/bin/pest"}, args...)...))
+}
+
+func cmdLint(a *App, args []string) int {
+	if !a.hasVendorBin("pint") {
+		fmt.Fprintln(a.Stderr, "bothy: "+pintMissing)
+		return 1
+	}
+	return a.Run(a.inApp(append([]string{"php", "vendor/bin/pint"}, args...)...))
+}
+
 // cmdMfs runs migrate:fresh and seeds with TestDataSeeder. Its arguments go
 // to migrate:fresh, so `bothy mfs --seeder=OtherSeeder` seeds with another.
 func cmdMfs(a *App, args []string) int {

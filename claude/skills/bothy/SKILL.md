@@ -56,6 +56,8 @@ running it.
 | `bothy composer <args>` | `composer <args>` in `appserver` |
 | `bothy test [args]` | `php artisan test [args]` |
 | `bothy testf <filter> [args]` | `php artisan test --filter <filter> [args]` |
+| `bothy pest [args]` | `vendor/bin/pest [args]`, for Pest's own flags; `bothy pest --help` lists them |
+| `bothy lint [args]` (or `pint`) | `vendor/bin/pint [args]`, which rewrites files to fix their style; `--test` only checks, `--dirty` only touches files with uncommitted changes |
 | `bothy ci` | the team's usual CI checks (below) |
 | `bothy db-export [file]` | dumps the database to a file (default `<folder>-<date>-<time>.sql.gz`; never overwrites) |
 | `bothy logs --tail <n> [service]` | the last lines a service logged, e.g. `bothy logs --tail 50 appserver` (read-only) |
@@ -63,13 +65,26 @@ running it.
 | `bothy ls` | lists running bothy projects (read-only) |
 | `bothy volumes` | lists every bothy volume and its size, running or not (read-only) |
 
-`tinker`, `shell` (alias `ssh`), `mysql` (alias `database`) and `horizon` are
+`bothy tinker`, `shell` (alias `ssh`), `mysql` (alias `database`) and `horizon` are
 interactive or run until stopped, so they are for the developer, not for you.
 The same goes for `bothy logs -f` (or `--follow`), which never ends. Give
 `bothy logs` a `--tail` and a service name: without them it prints
 everything every service has logged since it started.
 
-`bothy test`, `testf` and `ci` refuse to run while Laravel's config is cached
+For debugging, such as an Eloquent query or checking a `config()` value, run
+tinker with `--execute` instead: `bothy artisan tinker --execute '...'`.
+Always wrap the code in single quotes, with double quotes for PHP strings
+inside:
+
+```bash
+bothy artisan tinker --execute 'User::where("is_admin", true)->count();'
+```
+
+Never print credentials or other secrets (API keys,
+passwords, anything that comes from `.env`). A write to the database through
+tinker needs the same go-ahead as `bothy mfs` (see the rules above).
+
+`bothy test`, `testf`, `pest` and `ci` refuse to run while Laravel's config is cached
 (`bootstrap/cache/config.php`): with a cached config the tests ignore their
 own database settings and would wipe the developer's database. Don't clear
 the cache yourself, by `config:clear`, `optimize:clear` or deleting the file:

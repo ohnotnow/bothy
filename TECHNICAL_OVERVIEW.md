@@ -78,7 +78,7 @@ Apps join the proxy through Traefik labels and the external `bothy` network in t
 | File | Purpose |
 | --- | --- |
 | `app.go` | `App`, the `commands` table, global flag, help, `askYes` |
-| `compose.go` | The thin commands: start, stop, rebuild, destroy, artisan, composer, test, testf, mfs, horizon, logs, shell; `--lan`; the cached-config refusal |
+| `compose.go` | The thin commands: start, stop, rebuild, destroy, artisan, composer, test, testf, pest, lint, mfs, horizon, logs, shell; `--lan`; the cached-config refusal |
 | `docker.go` | Running docker for real; finding mkcert |
 | `proxy.go`, `certs.go` | The shared Traefik proxy and its certificate |
 | `info.go`, `lan.go` | `info`: published ports, routed hostnames, the database and S3 logins, the LAN address picker |
@@ -93,7 +93,8 @@ Apps join the proxy through Traefik labels and the external `bothy` network in t
 ## Behaviour Worth Knowing Before Changing It
 
 - **`BOTHY_BIND` is set on every `start` and `rebuild`,** to `127.0.0.1` without `--lan`, so a value left in the shell or the app's `.env` can't open an app to the network.
-- **`test`, `testf` and `ci` refuse while `bootstrap/cache/config.php` exists.** With a cached config Laravel ignores the tests' database settings and would wipe the developer's database.
+- **`test`, `testf`, `pest` and `ci` refuse while `bootstrap/cache/config.php` exists.** With a cached config Laravel ignores the tests' database settings and would wipe the developer's database. Any new command that runs the tests needs the same `refuseCachedConfig` call.
+- **`lint` and `ci` only know Pint.** An app without `vendor/bin/pint` fails both with the same message (`pintMissing`); there is deliberately no php-cs-fixer fallback.
 - **`ci` runs the tests as a MariaDB user that can only reach `bothy_ci` databases,** passing the connection as environment variables on the `exec`. A test pointed at the real database gets "access denied".
 - **`db-import` checks the whole dump before it wipes anything,** reading a `.gz` to the end, then backs up. Over 1 GB it asks, and without a terminal it refuses.
 - **`dumpTo` never overwrites, writes with mode 0600, and removes a half-written file.**

@@ -276,8 +276,8 @@ func (a *App) ciAudit() (ciStatus, int) {
 }
 
 func (a *App) ciPint() (ciStatus, int) {
-	if !fileExists(filepath.Join(a.Dir, "vendor", "bin", "pint")) {
-		fmt.Fprintln(a.Stdout, "Pint isn't installed (no vendor/bin/pint). Migrate to Pint if possible (bothy composer require --dev laravel/pint).")
+	if !a.hasVendorBin("pint") {
+		fmt.Fprintln(a.Stdout, pintMissing)
 		return ciFailed, 0
 	}
 	return a.ciRun(a.inApp("php", "vendor/bin/pint", "--test"))

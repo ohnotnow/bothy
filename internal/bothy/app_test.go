@@ -240,7 +240,7 @@ func TestExitCodePassesThrough(t *testing.T) {
 }
 
 func TestCachedConfigStopsTheTests(t *testing.T) {
-	for _, args := range [][]string{{"test"}, {"testf", "UserTest"}, {"ci"}} {
+	for _, args := range [][]string{{"test"}, {"testf", "UserTest"}, {"pest"}, {"ci"}} {
 		a, calls, _, stderr := fakeApp(t, true)
 		a.Output = func([]string) ([]byte, error) { t.Errorf("%q: asked docker something", args); return nil, nil }
 		write(t, a.Dir, "bootstrap/cache/config.php", "<?php return [];\n")
@@ -252,6 +252,50 @@ func TestCachedConfigStopsTheTests(t *testing.T) {
 		}
 		if !strings.Contains(stderr.String(), "bothy artisan config:clear") {
 			t.Errorf("%q: stderr should say how to clear it: %q", args, stderr)
+		}
+	}
+}
+
+func TestPestAndLintRunTheAppsOwnBinaries(t *testing.T) {
+	const exec = "compose -f compose.dev.yml exec appserver php "
+	cases := []struct{ args, want string }{
+		{"pest", "vendor/bin/pest"},
+		{"pest --help", "vendor/bin/pest --help"},
+		{"pest --parallel --bail", "vendor/bin/pest --parallel --bail"},
+		{"lint", "vendor/bin/pint"},
+		{"lint --test", "vendor/bin/pint --test"},
+		{"pint --dirty", "vendor/bin/pint --dirty"},
+	}
+	for _, c := range cases {
+		a, calls, _, stderr := fakeApp(t, true)
+		write(t, a.Dir, "vendor/bin/pest", "#!/usr/bin/env php\n")
+		write(t, a.Dir, "vendor/bin/pint", "#!/usr/bin/env php\n")
+		if code := a.Main(words(c.args)); code != 0 {
+			t.Fatalf("%s: exit %d, stderr %q", c.args, code, stderr)
+		}
+		want := [][]string{words(exec + c.want)}
+		if !reflect.DeepEqual(*calls, want) {
+			t.Errorf("%s: got %q, want %q", c.args, *calls, want)
+		}
+	}
+}
+
+func TestPestAndLintRefuseWithoutTheirBinary(t *testing.T) {
+	cases := []struct{ args, says string }{
+		{"pest", "no vendor/bin/pest"},
+		{"lint", "bothy composer require --dev laravel/pint"},
+		{"pint --test", "bothy composer require --dev laravel/pint"},
+	}
+	for _, c := range cases {
+		a, calls, _, stderr := fakeApp(t, true)
+		if code := a.Main(words(c.args)); code != 1 {
+			t.Errorf("%s: exit %d, want 1", c.args, code)
+		}
+		if len(*calls) != 0 {
+			t.Errorf("%s: docker was called: %q", c.args, *calls)
+		}
+		if !strings.Contains(stderr.String(), c.says) {
+			t.Errorf("%s: stderr should contain %q: %q", c.args, c.says, stderr)
 		}
 	}
 }
