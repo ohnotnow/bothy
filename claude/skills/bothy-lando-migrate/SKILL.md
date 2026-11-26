@@ -57,7 +57,7 @@ Placeholders in `compose.dev.yml`:
   2. Take each variable's value from `.env.example`, which the team keeps
      working for a fresh clone (for example `cache`, `mail` or
      `sendmailhog`).
-  3. In step 8, tell the developer which lines their own `.env` needs
+  3. In step 7, tell the developer which lines their own `.env` needs
      (for example `MAIL_HOST=sendmailhog`), since you can't read it.
 
 Copy from `reference/`, not from another converted app: other apps' copies
@@ -179,46 +179,7 @@ Otherwise add `$middleware->trustProxies(at: '*');` inside `withMiddleware`
 (in an older app with `app/Http/Kernel.php`, set `$proxies = '*'` in its
 `TrustProxies` middleware instead).
 
-## 5. Agent guidance: lando becomes bothy
-
-The app's agent instructions probably tell agents the team uses lando.
-
-- **Boost.** If the app has `.ai/guidelines/`, look for lando in the blade
-  files there (usually a "Use of lando" section in
-  `.ai/guidelines/team-conventions.blade.php`). Rewrite that section for
-  bothy, keeping the rest of the file as it is, along these lines:
-
-  ```markdown
-  ### Use of bothy
-
-  We use bothy for local development: a small wrapper over docker compose
-  (see the bothy skill). Run artisan, composer and the tests through it:
-  `bothy artisan ...`, `bothy composer ...`, `bothy test`. The Mac may also
-  have PHP, but its version may not match the app's, so only use it if the
-  developer asks.
-
-  Do not run commands that change or wipe the database unless the developer
-  asks. The developer will run migrations for you if you ask.
-
-  Note: The local test environment uses an in-memory database via the
-  RefreshDatabase trait. So there is no need to run migrations or seeders in
-  the test environment.
-  ```
-
-  Keep any lines in the old section that aren't about lando. Lines about
-  running commands directly on the Mac are covered by the PHP sentence
-  above: don't keep them as well. Boost builds
-  `CLAUDE.md` (and `AGENTS.md`) from these files, so they need regenerating
-  afterwards: the closing message offers it.
-- **CLAUDE.md and AGENTS.md.** A Boost-generated file has section headings
-  like `=== .ai/team-conventions rules ===`; regenerating it is the fix, so
-  don't edit it by hand. If it lacks a section for a guideline file that
-  exists, it was already out of date: warn the developer that regenerating
-  will add more than the bothy change. If the file is hand-written and
-  mentions lando, show the developer the lines and offer to change them for
-  bothy.
-
-## 6. Ignore database dumps
+## 5. Ignore database dumps
 
 Make sure `.gitignore` has `*.sql` and `*.sql.gz`, and `.dockerignore` has
 `**/*.sql` and `**/*.sql.gz`, adding the lines at the end if not (without a
@@ -231,7 +192,7 @@ the Dockerfile's `COPY . /app`. Add nothing else to either file.
 Do not touch `.lando.yml`: the developer decides whether to keep it as a
 fallback.
 
-## 7. Check, without starting anything
+## 6. Check, without starting anything
 
 - `docker compose -f compose.dev.yml config -q`.
 - `bothy --dry-run start`.
@@ -239,7 +200,7 @@ fallback.
   with the version you set in `docker/dev.Dockerfile`: the dry run doesn't
   check that the base image exists for it.
 
-## 8. Hand over to the developer
+## 7. Hand over to the developer
 
 Tell the developer the files are ready for them to look over, and list the
 commands that bring the app up:
@@ -266,7 +227,7 @@ developer's to start (see the `bothy` skill), so run them only on a clear yes.
 If running one is refused, by the developer or by a permission rule, give the
 developer the command and leave it there: don't look for another route.
 
-## 9. Offer some checks
+## 8. Offer some checks
 
 Once the app is up (the developer ran the commands above, or you did on their
 say-so), ask whether they would like you to check it over, in plain words.
@@ -291,7 +252,7 @@ On a yes, and only then:
 
 Tell the developer what each check found, in a line each.
 
-## 10. Closing message
+## 9. Closing message
 
 Keep it short: a few lines, only what applies to this app. Don't list
 bothy's commands here, and don't list anything bothy lacks.
@@ -310,9 +271,6 @@ bothy's commands here, and don't list anything bothy lacks.
 - If `bothy start` complained about certificates, or you don't know
   whether it did and the developer hasn't opened the app yet:
   `brew install mkcert nss`, then `mkcert -install`, once per Mac.
-- If `CLAUDE.md` is Boost-generated and you changed `.ai/guidelines/`: offer
-  to run `bothy artisan boost:update` to regenerate it (`boost:install`
-  asks questions, so leave that to the developer).
 - If `package-lock.json` changed when npm ran on the Mac: worth a look
   before committing.
 - `.lando.yml` is still there, for them to keep or bin, and the changed
